@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Golazo — Morning Footy &amp; Soccer News</title>
+<!-- PWA: installable home-screen app -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Golazo">
+<meta name="theme-color" content="#04140c">
+<link rel="apple-touch-icon" href="icon-512.png">
+<link rel="icon" type="image/png" href="icon-512.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+
+  :root{
+    --bg:#04140c; --ink:#f2f5f7; --mut:#96a1ad;
+    --silver:#b8e6cc; --live:#3ddc84; --gold:#7dffb0; --bad:#ff6b83;
+    --glass:rgba(255,255,255,.05); --glass2:rgba(255,255,255,.085);
+    --hair:rgba(255,255,255,.075); --hair2:rgba(255,255,255,.045);
+    --r:22px; --rs:16px;
+    --ease:cubic-bezier(.22,.61,.36,1);
+    --txt:var(--ink); --muted:var(--mut); --accent:var(--silver);
+    --winline:var(--live); --lossline:var(--bad); --line:var(--hair);
+    --panel:var(--glass); --panel2:var(--glass2);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{
+    color:var(--ink);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    min-height:100vh;padding:0 0 64px;position:relative;overflow-x:hidden;
+    background:
+      radial-gradient(1100px 620px at 12% -8%, rgba(0,214,110,.22), transparent 62%),
+      radial-gradient(900px 520px at 92% 2%, rgba(240,220,60,.12), transparent 58%),
+      radial-gradient(900px 800px at 50% 112%, rgba(0,214,110,.10), transparent 62%),
+      var(--bg);
+    background-attachment:fixed;
+  }
+  /* slow aurora drift so the page never feels static */
+  body::before{content:"";position:fixed;inset:-25%;z-index:-1;pointer-events:none;
+    background:radial-gradient(closest-side, rgba(0,214,110,.16), transparent 70%);
+    width:70vmax;height:70vmax;left:-10vmax;top:-15vmax;filter:blur(30px);
+    animation:drift 26s ease-in-out infinite alternate}
+  @keyframes drift{to{transform:translate3d(28vw,16vh,0) scale(1.25)}}
+  ::selection{background:rgba(0,214,110,.4)}
+  /* TICKER — edges fade instead of ending in a hard block */
+  .ticker{position:sticky;top:0;z-index:60;overflow:hidden;white-space:nowrap;
+    padding-top:env(safe-area-inset-top,0px);
+    background:linear-gradient(90deg,rgba(3,14,9,.94),rgba(8,32,20,.8));
+    backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);
+    box-shadow:0 1px 0 var(--hair2),0 12px 30px -20px rgba(0,0,0,.9)}
+  .ticker-row{display:flex;align-items:center}
+  .ticker-lbl{flex:none;margin:6px 0 6px 10px;padding:5px 12px;border-radius:999px;
+    background:linear-gradient(135deg,#7dffb0,#00b85e);color:#032a15;
+    font-weight:800;font-size:10.5px;letter-spacing:.6px;text-transform:uppercase;z-index:2;
+    box-shadow:0 4px 14px rgba(0,214,110,.28)}
+  .ticker-mask{overflow:hidden;flex:1;
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 26px,#000 88%,transparent);
+    mask-image:linear-gradient(90deg,transparent,#000 26px,#000 88%,transparent)}
+  .ticker-track{display:inline-block;white-space:nowrap;animation:tick 58s linear infinite;will-change:transform}
+  .ticker:hover .ticker-track{animation-play-state:paused}
+  .ticker-item{display:inline-flex;align-items:center;gap:6px;margin:0 20px;font-size:12.5px;font-weight:600;padding:8px 0}
+  .ticker-item b{color:var(--gold)}
+  .ticker-item .mut{color:var(--mut);font-weight:400}
+  @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  /* HEADER */
+  header{padding:20px 18px 18px;text-align:center;position:relative}
+  header::after{content:"";position:absolute;left:14%;right:14%;bottom:0;height:1px;
+    background:linear-gradient(90deg,transparent,var(--hair),transparent)}
+  .bigsock{font-size:clamp(46px,13vw,60px);line-height:1;margin-bottom:4px;
+    filter:drop-shadow(0 10px 22px rgba(0,0,0,.55));animation:bob 5s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-8px) rotate(2deg)}}
+  h1{font-size:clamp(20px,5.6vw,25px);letter-spacing:-.5px;font-weight:800;
+    display:flex;align-items:center;gap:10px;justify-content:center;flex-wrap:wrap;
+    background:linear-gradient(180deg,#fff,#8fe6b6);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .badge{background:linear-gradient(135deg,#7dffb0,#00b85e);color:#032a15;font-size:11px;font-weight:800;
+    padding:4px 10px;border-radius:999px;letter-spacing:.4px;text-transform:uppercase;
+    box-shadow:0 6px 18px rgba(0,214,110,.26)}
+  .sub{color:var(--mut);margin-top:7px;font-size:13px}
+  .sub b{color:var(--silver)}
+  .statusbar{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;justify-content:center}
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:600;
+    background:var(--glass);border:1px solid var(--hair);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    transition:background .3s var(--ease)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--mut);position:relative}
+  .chip.live .dot{background:var(--live)}
+  .chip.live .dot::after{content:"";position:absolute;inset:-5px;border-radius:50%;
+    border:1px solid var(--live);opacity:.6;animation:ring 1.8s var(--ease) infinite}
+  @keyframes ring{to{transform:scale(2.1);opacity:0}}
+  .chip.snap .dot{background:var(--gold)}
+  .chip.err .dot{background:var(--bad)}
+  .chip.load .dot{background:var(--silver);animation:pulse .9s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.3}}
+  .rbtn{background:var(--glass);border:1px solid var(--hair);color:var(--ink);padding:7px 15px;border-radius:999px;
+    cursor:pointer;font-weight:600;font-size:12.5px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    transition:transform .25s var(--ease),background .25s var(--ease),border-color .25s var(--ease)}
+  .rbtn:hover{background:var(--glass2);border-color:rgba(125,255,176,.45)}
+  .rbtn:active{transform:scale(.95)}
+  .wrap{max-width:780px;margin:0 auto;padding:0 15px}
+  /* NAV — pills, no boxes */
+  nav{display:flex;gap:7px;flex-wrap:wrap;margin:18px 0 6px;justify-content:center}
+  nav button{background:var(--glass);border:1px solid var(--hair);color:var(--mut);
+    padding:9px 16px;border-radius:999px;cursor:pointer;font-weight:700;font-size:13.5px;
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    transition:transform .28s var(--ease),background .28s var(--ease),color .28s var(--ease),box-shadow .28s var(--ease)}
+  nav button:hover{color:var(--ink);background:var(--glass2)}
+  nav button:active{transform:scale(.95)}
+  nav button.on{background:linear-gradient(135deg,#7dffb0,#00b85e);color:#032a15;border-color:transparent;
+    box-shadow:0 8px 22px -6px rgba(0,214,110,.5)}
+  section{display:none}
+  section.on{display:block;animation:rise .42s var(--ease)}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .note{color:var(--mut);font-size:12.5px;margin:16px 0;padding:12px 15px;border-radius:var(--rs);
+    background:linear-gradient(180deg,var(--glass2),var(--glass));border:1px solid var(--hair);
+    backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    box-shadow:inset 2px 0 0 rgba(125,255,176,.7)}
+  .note b{color:var(--ink)}
+  .note.warn{box-shadow:inset 2px 0 0 var(--gold)}
+  /* CARDS — glass, soft, lifted */
+  .card{padding:16px;margin:14px 0;border-radius:var(--r);
+    background:linear-gradient(180deg,var(--glass2),var(--glass));border:1px solid var(--hair);
+    backdrop-filter:blur(20px) saturate(140%);-webkit-backdrop-filter:blur(20px) saturate(140%);
+    box-shadow:0 18px 40px -24px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,255,255,.06);
+    transition:transform .35s var(--ease),box-shadow .35s var(--ease)}
+  .card:hover{transform:translateY(-2px);box-shadow:0 26px 50px -26px rgba(0,0,0,.95),inset 0 1px 0 rgba(255,255,255,.08)}
+  .card h2{font-size:12.5px;text-transform:uppercase;letter-spacing:1px;color:var(--gold);
+    margin-bottom:12px;display:flex;align-items:center;gap:8px;font-weight:800}
+  .hero{text-align:center;padding:8px 0 6px}
+  .hero .vs{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:1.4px}
+  .hero .opp{font-size:clamp(19px,5.4vw,23px);font-weight:800;margin:6px 0;letter-spacing:-.3px}
+  .hero .meta{font-size:13px;color:var(--mut)}
+  .hero .cd{font-size:14px;color:var(--gold);font-weight:800;margin-top:10px}
+  .hero .score{font-size:clamp(34px,11vw,44px);font-weight:900;letter-spacing:-1px;margin:4px 0;
+    font-variant-numeric:tabular-nums;
+    background:linear-gradient(180deg,#fff,#9fb0bb);-webkit-background-clip:text;background-clip:text;color:transparent}
+  /* background-image, NOT the `background` shorthand — the shorthand resets background-clip
+     back to border-box and the gradient paints the whole box instead of the digits. */
+  .hero .score.res-w{background-image:linear-gradient(180deg,#b6ffd8,#3ddc84)}
+  .hero .score.res-l{background-image:linear-gradient(180deg,#ffc2cd,#ff6b83)}
+  .inn{display:inline-flex;align-items:center;gap:7px;padding:4px 12px;border-radius:999px;
+    background:rgba(61,220,132,.12);color:var(--live);border:1px solid rgba(61,220,132,.35);
+    font-size:11.5px;font-weight:800}
+  .snapgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .snapgrid .b{background:var(--glass);border:1px solid var(--hair2);border-radius:var(--rs);padding:11px 13px;
+    transition:background .3s var(--ease)}
+  .snapgrid .b:hover{background:var(--glass2)}
+  .snapgrid .k{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--mut)}
+  .snapgrid .v{font-size:17px;font-weight:800;margin-top:3px;letter-spacing:-.3px}
+  .streak-w{color:var(--live)} .streak-l{color:var(--bad)}
+  /* SCHEDULE — flowing rows, hairlines not boxes */
+  .mhd{font-size:11px;text-transform:uppercase;letter-spacing:1.6px;color:var(--gold);margin:22px 4px 8px;font-weight:800}
+  .grow{display:grid;grid-template-columns:58px 1fr 86px;gap:10px;align-items:center;
+    padding:11px 14px;margin-bottom:3px;border-radius:var(--rs);border:1px solid transparent;
+    background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.02));
+    transition:background .28s var(--ease),transform .28s var(--ease),border-color .28s var(--ease)}
+  .grow:hover{background:var(--glass2);transform:translateX(3px)}
+  .grow.next{border-color:rgba(245,207,122,.45);background:linear-gradient(180deg,rgba(245,207,122,.13),rgba(245,207,122,.04));
+    box-shadow:0 10px 26px -18px rgba(245,207,122,.8)}
+  .grow.done{opacity:.72}
+  .grow .dt{font-size:11.5px;color:var(--gold);font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3}
+  .grow .dt small{display:block;color:var(--mut);font-weight:600;font-size:10px;letter-spacing:.5px}
+  .grow .op{font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0}
+  .grow .op .ha{color:var(--mut);font-weight:600;font-size:11px}
+  .grow .rt{text-align:right;font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums}
+  .tag{font-size:9.5px;font-weight:800;padding:3px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:.5px}
+  .tag.w{background:rgba(61,220,132,.15);color:var(--live)}
+  .tag.l{background:rgba(255,107,131,.15);color:var(--bad)}
+  .tag.ppd{background:rgba(245,207,122,.14);color:var(--gold)}
+  .tag.live{background:rgba(61,220,132,.16);color:var(--live);border:1px solid rgba(61,220,132,.4)}
+  /* TABLE — no grid lines, just soft banding */
+  .tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px}
+  table{width:100%;border-collapse:separate;border-spacing:0 3px;font-size:13px}
+  th,td{padding:9px 5px;text-align:center;font-variant-numeric:tabular-nums;border:0}
+  th{color:var(--mut);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.9px;padding-bottom:4px}
+  tbody tr{transition:transform .25s var(--ease),background .25s var(--ease)}
+  tbody tr td{background:rgba(255,255,255,.028)}
+  tbody tr:hover td{background:rgba(255,255,255,.06)}
+  tbody tr td:first-child{border-radius:12px 0 0 12px}
+  tbody tr td:last-child{border-radius:0 12px 12px 0}
+  td.team{text-align:left;font-weight:700;white-space:nowrap}
+  td.pos{font-weight:800;width:26px;color:var(--mut)}
+  td.pts{font-weight:900;color:var(--gold)}
+  tr.sox td{background:linear-gradient(90deg,rgba(196,206,212,.22),rgba(196,206,212,.09))}
+  tr.sox:hover td{background:linear-gradient(90deg,rgba(196,206,212,.3),rgba(196,206,212,.12))}
+  tr.sox td:first-child{box-shadow:inset 3px 0 0 var(--silver)}
+  .divhd{font-size:11px;text-transform:uppercase;letter-spacing:1.6px;color:var(--silver);margin:20px 4px 6px;font-weight:800;opacity:.75}
+  .divhd.me{color:var(--gold);opacity:1}
+  /* LEAGUE SLATE */
+  .lg{display:grid;grid-template-columns:1fr 82px 1fr;gap:10px;align-items:center;
+    padding:11px 14px;margin-bottom:3px;border-radius:var(--rs);border:1px solid transparent;
+    background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.02));
+    transition:background .28s var(--ease),transform .28s var(--ease)}
+  .lg:hover{background:var(--glass2);transform:translateY(-1px)}
+  .lg.sox{border-color:rgba(125,255,176,.45);background:linear-gradient(180deg,rgba(0,214,110,.16),rgba(0,214,110,.05))}
+  .lg .side{display:flex;align-items:center;gap:7px;min-width:0}
+  .lg .side.r{flex-direction:row-reverse;text-align:right}
+  .lg .side span{font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lg .mid{text-align:center;font-variant-numeric:tabular-nums}
+  .lg .sc{font-size:16px;font-weight:900;letter-spacing:-.5px}
+  .lg .tm{font-size:10px;color:var(--mut);font-weight:700;letter-spacing:.4px}
+  .lg .tm.on{color:var(--live)}
+  .kv{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:10px 0;
+    box-shadow:inset 0 -1px 0 var(--hair2)}
+  .kv:last-child{box-shadow:none}
+  .kv .k{color:var(--mut);font-size:13px}
+  .kv .v{font-weight:800;font-size:15px;letter-spacing:-.2px}
+  .foot{color:var(--mut);font-size:11.5px;line-height:1.75;margin:26px 0 0;padding-top:16px;
+    border-top:1px solid var(--hair2)}
+  .foot a{color:var(--silver);text-decoration:none;border-bottom:1px solid rgba(196,206,212,.3)}
+  @media (max-width:430px){ .hide-s{display:none} th,td{padding:9px 4px;font-size:12.5px} }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important}
+    .card:hover,.grow:hover,.lg:hover{transform:none}
+  }
+
+  /* VIDEO CARDS — the whole card is an outbound link to YouTube */
+  .vid{display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:center;text-decoration:none;color:inherit;
+    padding:10px;margin-bottom:8px;border-radius:var(--rs);border:1px solid transparent;
+    background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+    transition:background .28s var(--ease),transform .28s var(--ease),border-color .28s var(--ease)}
+  .vid:hover{background:var(--glass2);transform:translateY(-2px);border-color:rgba(125,255,176,.3)}
+  .vid:active{transform:scale(.99)}
+  .thumb{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#071f14}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .thumb .play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:20px;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.7);opacity:.92;
+    background:linear-gradient(180deg,transparent,rgba(0,0,0,.35))}
+  .vtx{min-width:0}
+  .vt{font-weight:700;font-size:13.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .vm{font-size:11px;color:var(--mut);margin-top:5px;font-weight:600}
+  /* NEWS ROWS */
+  .news{display:block;text-decoration:none;color:inherit;padding:12px 14px;margin-bottom:6px;border-radius:var(--rs);
+    border:1px solid transparent;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.02));
+    transition:background .28s var(--ease),transform .28s var(--ease),border-color .28s var(--ease)}
+  .news:hover{background:var(--glass2);transform:translateX(3px);border-color:rgba(125,255,176,.28)}
+  .nt{font-weight:700;font-size:13.5px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .nm{font-size:11px;color:var(--mut);margin-top:5px;font-weight:600}
+  @media (max-width:430px){ .vid{grid-template-columns:124px 1fr;gap:10px} .vt{font-size:13px} }
+
+</style>
+</head>
+<body>
+
+<div class="ticker">
+  <div class="ticker-row">
+    <span class="ticker-lbl">⚽ Golazo</span>
+    <div class="ticker-mask"><div class="ticker-track" id="tickerTrack"></div></div>
+  </div>
+</div>
+
+<header>
+  <div class="bigsock">⚽</div>
+  <h1>Golazo <span class="badge" id="cntBadge">Morning Footy</span></h1>
+  <div class="sub">CBS Sports Golazo · <b>Morning Footy</b> · <span id="subLine">soccer news, scores &amp; tables</span></div>
+  <div class="statusbar">
+    <span class="chip load" id="chip"><span class="dot"></span><span id="chipTxt">Loading…</span></span>
+    <button class="rbtn" id="refreshBtn">↻ Refresh</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav>
+    <button class="on" data-t="footy">🎙️ Morning Footy</button>
+    <button data-t="channel">📺 Golazo</button>
+    <button data-t="news">📰 News</button>
+    <button data-t="scores">⚽ Scores</button>
+    <button data-t="tables">📊 Tables</button>
+  </nav>
+
+  <section class="on" id="footy"><div id="footyEl"></div></section>
+  <section id="channel"><div id="channelEl"></div></section>
+  <section id="news"><div id="newsEl"></div></section>
+  <section id="scores"><div id="scoresEl"></div></section>
+  <section id="tables"><div id="tablesEl"></div></section>
+</div>
+
+<div class="wrap">
+  <div class="foot">
+    Videos are listed from the public YouTube feeds of <a href="https://www.youtube.com/@cbssportsgolazo" target="_blank" rel="noopener">CBS Sports Golazo</a> — title, thumbnail and publish time only; tap any card to watch it on YouTube, where it belongs. Headlines come from <a href="https://www.gdeltproject.org" target="_blank" rel="noopener">GDELT</a> and open on the publisher's own site. <b>No transcripts, descriptions or article text are reproduced here</b> — this is an index that points at the originals. Scores and tables are live from <a href="https://www.espn.com/soccer/" target="_blank" rel="noopener">ESPN</a>. Unofficial personal dashboard; not affiliated with CBS, Paramount, YouTube or ESPN.
+  </div>
+</div>
+
+<script>
+/* ============ CONFIG ============ */
+// YouTube's feeds send no CORS header, so the browser cannot read them directly.
+// api.allorigins.win/raw was the ONLY working route of four tested — and it rate-limits,
+// hence retryWithBackoff() + a last-good cache + an honest "cached" chip.
+// No keyless CORS route to YouTube is reliable: during this build allorigins went from
+// 200 to dead within the hour, codetabs 521'd, cors.lol 429'd. So: try each in turn, and if
+// they all fail fall back to SNAP below rather than showing an empty tab.
+const PROXIES=[
+  u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u),
+  u=>"https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(u),
+  u=>"https://api.cors.lol/?url="+encodeURIComponent(u)
+];
+const YT="https://www.youtube.com/feeds/videos.xml?";
+const FOOTY_PLAYLIST="PLkwBiY2Dq-oaIgGBBi6zuPX0_4OH-E4mh";   // Morning Footy show playlist
+const GOLAZO_CHANNEL="UCX_tjI6Q_4JD1E3234CwemA";             // CBS Sports Golazo
+const GDELT="https://api.gdeltproject.org/api/v2/doc/doc";
+const ESPN="https://site.api.espn.com/apis/site/v2/sports/soccer";
+const WEB="https://site.web.api.espn.com/apis/v2/sports/soccer";
+const SEASON=2026;
+const COMPS=[
+  {slug:"eng.1",label:"Premier League"},
+  {slug:"esp.1",label:"LaLiga"},
+  {slug:"ita.1",label:"Serie A"},
+  {slug:"ger.1",label:"Bundesliga"},
+  {slug:"fra.1",label:"Ligue 1"},
+  {slug:"uefa.champions",label:"Champions League"}
+];
+const TABLE_COMPS=COMPS.filter(c=>c.slug!=="uefa.champions");
+const CACHE_KEY="golazo-cache-v2";   // v1 held unfiltered news
+const SLOW_MS=5*60*1000;      // videos + news: every 5 min, not every 60s
+const TABLES_MS=10*60*1000;   // tables: lazy, then every 10 min while visible
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+async function fetchJSON(u){ const r=await fetch(u,{cache:"no-store"}); if(!r.ok) throw new Error(r.status); return r.json(); }
+async function retryWithBackoff(url,rounds){
+  rounds=rounds||2;
+  for(let r=0;r<rounds;r++){
+    for(const mk of PROXIES){
+      try{
+        const res=await fetch(mk(url),{cache:"no-store"});
+        if(res.ok){ const t=await res.text(); if(t&&t.length>500&&t.indexOf("<entry")>=0) return t; }
+      }catch(e){}
+    }
+    await new Promise(s=>setTimeout(s,600*(r+1)));
+  }
+  return null;
+}
+/* Snapshot captured at build time so the show tab always has real content when every
+   proxy is down. Titles + ids + timestamps only — the cards still link out to YouTube. */
+const SNAP={"date":"2026-08-01","footy":[{"id":"PFclUh1EpiA","t":"A New Era at Tottenham: De Zerbi’s Plan to Revive Spurs","d":"2026-07-31T15:40:45+00:00"},{"id":"c2mre62OlVM","t":"CONCACAF & AFC Join UEFA in Opposing FIFA's plan for the World Cup | Will anyone else follow?","d":"2026-07-31T15:09:18+00:00"},{"id":"X_xs5TvJ4VY","t":"UEFA to BOYCOTT FIFA World Cup | Will Anyone Else Follow? | Everything you need to know EXPLAINED!","d":"2026-07-30T16:15:30+00:00"},{"id":"7EJmyuPHv4Y","t":"Eddie Howe LEAVES Newcastle... What Happens Next?","d":"2026-07-30T15:33:31+00:00"},{"id":"grgGYKqwg5w","t":"Barcelona two BIG signings | How will Gordon & Adeyemi fit into the team?","d":"2026-07-30T15:15:36+00:00"},{"id":"bvi5c_LO03I","t":"New Club. New Pressure. Can These Managers Deliver? 🧐","d":"2026-07-30T14:41:14+00:00"},{"id":"Fe7004p-M_g","t":"Arsenal's Piero Hincapié discusses Premier League title + 2026/27 season preview","d":"2026-07-29T16:14:29+00:00"},{"id":"M-c70Ss9Sbk","t":"Morning Footy LIVE: FIFA selling stake in the WORLD CUP","d":"2026-07-29T16:04:02+00:00"},{"id":"2n201omvRMA","t":"What is the FFE? What are FIFA's plans with Private Investors? Everything you NEED to Know Explained","d":"2026-07-29T15:53:37+00:00"},{"id":"AE6XbA7mekM","t":"Will Real Madrid be UNSTOPPABLE this Season? | 2026-2027 La Liga Season Preview","d":"2026-07-28T16:46:15+00:00"},{"id":"LXKymDDKEQQ","t":"CHELSEA 2026-2027 Season PREVIEW","d":"2026-07-28T15:27:23+00:00"},{"id":"mh75VhtkAfw","t":"PREVIEWING the 2026/27 English Premier League","d":"2026-07-27T16:06:22+00:00"},{"id":"62QTUstssQo","t":"ARSENAL 2026-2027 Season PREVIEW","d":"2026-07-27T15:08:24+00:00"},{"id":"8ZuQxS3lBlY","t":"Is Marc Cucurella the BEST FULLBACK in the World? 🇪🇸👑","d":"2026-07-23T15:16:37+00:00"}],"channel":[{"id":"6UDgd5nL6K0","t":"How Esther González’s Departure Impacts Gotham FC 🗽 | NWSL CheckIns & WAFCON Recap | Attacking Third","d":"2026-07-31T03:58:40+00:00"},{"id":"PaDVoliE2Fw","t":"NWSL Summer Check-In: Looking at EVERY team in the top 8 of this NWSL season","d":"2026-07-30T20:42:47+00:00"},{"id":"-KtxOEMykJs","t":"Bay FC vs. Gotham FC: Extended Highlights | NWSL | W Golazo","d":"2026-07-30T04:25:22+00:00"},{"id":"W3-J5x-vCVY","t":"Kansas City Current vs. Racing Louisville FC: Extended Highlights | NWSL | W Golazo","d":"2026-07-30T02:25:07+00:00"},{"id":"k8cWOVvZ35k","t":"San Diego Wave FC vs. Seattle Reign FC: Extended Highlights | NWSL | W Golazo","d":"2026-07-26T23:18:53+00:00"},{"id":"gFKmOAONlko","t":"NWSL Summer Check-ins | Weekend Preview: Spirit vs Summit, Gotham vs Thorns | Attacking Third","d":"2026-07-24T03:57:34+00:00"},{"id":"j2XXkq3aM3k","t":"Racing Louisville, Chicago, Boston and More: Summer Verdict","d":"2026-07-23T19:08:10+00:00"},{"id":"B7W370QlcZk","t":"WAY TOO EARLY 2027 Women's World Cup Predictions","d":"2026-07-23T18:33:24+00:00"},{"id":"VlQ83nsGgcE","t":"NWSL Team of the WEEK | Croix Bethune & Trinity Byars SHOW OUT","d":"2026-07-20T19:57:30+00:00"},{"id":"ijtPEvSavXI","t":"Can Gotham FC Stay Hot? Heaps Makes Her Mark in Denver | NWSL Matchweek 13 Recap","d":"2026-07-20T02:17:52+00:00"}]};
+function fromSnap(list){
+  return (list||[]).map(v=>({id:v.id,title:v.t,url:`https://www.youtube.com/watch?v=${v.id}`,
+    thumb:`https://i.ytimg.com/vi/${v.id}/mqdefault.jpg`,ts:new Date(v.d).getTime()||0}))
+    .sort((a,b)=>b.ts-a.ts);
+}
+
+/* ============ STATE ============ */
+const STATE={footy:[],channel:[],news:[],scores:[],tables:[],
+  stamp:null,vidStamp:0,newsStamp:0,tblStamp:0,ok:false,vidsFresh:false,vidSrc:''};
+
+/* ============ PARSE ============ */
+// Parsed with DOMParser, not regex. Video id comes from the alternate link so we never
+// have to fight XML namespaces for <yt:videoId>.
+function parseFeed(xml){
+  if(!xml) return [];
+  const doc=new DOMParser().parseFromString(xml,"text/xml");
+  if(doc.querySelector("parsererror")) return [];
+  return [...doc.getElementsByTagName("entry")].map(en=>{
+    const get=t=>{const n=en.getElementsByTagName(t)[0];return n?n.textContent:""};
+    const link=[...en.getElementsByTagName("link")].map(l=>l.getAttribute("href")).find(h=>h&&h.indexOf("watch?v=")>=0)||"";
+    const id=(link.split("watch?v=")[1]||"").split("&")[0];
+    const title=get("title")||"";
+    const published=get("published")||get("updated")||"";
+    return id?{id,title,url:`https://www.youtube.com/watch?v=${id}`,
+      thumb:`https://i.ytimg.com/vi/${id}/mqdefault.jpg`,
+      ts:new Date(published).getTime()||0}:null;
+  }).filter(Boolean).sort((a,b)=>b.ts-a.ts);
+}
+// GDELT's "soccer" query pulls in the occasional unrelated story, and its rate limit
+// (~1 request / 5s) makes query tuning expensive. Filtering titles client-side costs
+// nothing extra; if the filter is too aggressive we keep the raw list rather than
+// showing an empty tab.
+// Deliberately STRONG terms only. "united", "city", "club", "transfer" and "manager" were
+// in an earlier version and matched "United States", "…city…" and a Senate race — relevance
+// beats volume here, so a short honest list is better than a padded one.
+const SOCCER_KW=["soccer","fifa","uefa","premier league","la liga","laliga","serie a","bundesliga",
+ "ligue 1","champions league","europa league","conference league","world cup","concacaf","copa ",
+ "mls ","nwsl","ballon d'or","matchday","striker","midfielder","goalkeeper","offside","penalty kick",
+ "football club","footballer","transfer window","manchester","liverpool","arsenal","chelsea","tottenham",
+ "barcelona","real madrid","bayern","juventus","psg","inter milan","ac milan","atletico"];
+function isSoccer(a){
+  const t=(a.title||"").toLowerCase();
+  return SOCCER_KW.some(k=>t.indexOf(k)>=0);
+}
+function parseNews(d){
+  const all=((d&&d.articles)||[]).map(a=>{
+    // GDELT stamps look like 20260731T224500Z
+    const s=a.seendate||"";
+    const iso=s.length>=15?`${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}T${s.slice(9,11)}:${s.slice(11,13)}:${s.slice(13,15)}Z`:"";
+    return {title:String(a.title||"").replace(/\s+([,.:;!?%])/g,"$1").replace(/\s{2,}/g," ").trim(),url:a.url||"",domain:a.domain||"",img:a.socialimage||"",ts:new Date(iso).getTime()||0};
+  }).filter(a=>a.title&&a.url).sort((a,b)=>b.ts-a.ts);
+  const soccer=all.filter(isSoccer);
+  return soccer.length?soccer:all;
+}
+function mapMatch(e,comp){
+  const c=e&&e.competitions&&e.competitions[0]; if(!c) return null;
+  const cs=c.competitors||[];
+  const h=cs.find(x=>x.homeAway==="home")||cs[0], a=cs.find(x=>x.homeAway==="away")||cs[1];
+  if(!h||!a) return null;
+  const st=(c.status&&c.status.type)||{};
+  const num=v=>{const n=parseInt(v&&v.value!=null?v.value:v,10);return isNaN(n)?null:n};
+  const side=x=>({id:(x.team&&x.team.id)||"",name:(x.team&&(x.team.shortDisplayName||x.team.displayName))||"TBD",sc:num(x.score)});
+  return {id:String(e.id),ts:new Date(e.date).getTime(),comp:comp.label,
+    home:side(h),away:side(a),state:st.state||"pre",detail:st.shortDetail||"",
+    live:st.state==="in",final:st.state==="post"};
+}
+function parseTable(d){
+  const kids=(d&&d.children)||[];
+  const grp=kids.find(k=>k.standings&&k.standings.entries&&k.standings.entries.length)||kids[0];
+  return (((grp||{}).standings||{}).entries||[]).map(en=>{
+    const s={}; (en.stats||[]).forEach(x=>{s[x.name]=x});
+    const n=k=>{const v=s[k]&&(s[k].value!=null?s[k].value:s[k].displayValue);const p=parseInt(v,10);return isNaN(p)?0:p};
+    return{id:(en.team&&en.team.id)||"",name:(en.team&&(en.team.shortDisplayName||en.team.displayName))||"?",
+      gp:n("gamesPlayed"),w:n("wins"),d:n("ties"),l:n("losses"),gd:n("pointDifferential"),pts:n("points"),
+      note:en.note?{color:en.note.color,desc:en.note.description}:null};
+  }).sort((a,b)=>b.pts-a.pts||b.gd-a.gd||a.name.localeCompare(b.name)).map((r,i)=>({...r,pos:i+1}));
+}
+
+/* ============ LOAD ============ */
+function saveCache(){
+  try{ localStorage.setItem(CACHE_KEY,JSON.stringify({footy:STATE.footy,channel:STATE.channel,news:STATE.news,
+    scores:STATE.scores,tables:STATE.tables,stamp:Date.now(),vidStamp:STATE.vidStamp,newsStamp:STATE.newsStamp})); }catch(e){}
+}
+function loadCache(){
+  try{
+    const c=JSON.parse(localStorage.getItem(CACHE_KEY)||"null");
+    if(c&&((c.footy||[]).length||(c.news||[]).length)){
+      STATE.footy=c.footy||[]; STATE.channel=c.channel||[]; STATE.news=c.news||[];
+      STATE.scores=c.scores||[]; STATE.tables=c.tables||[]; STATE.stamp=c.stamp;
+      STATE.vidStamp=c.vidStamp||0; STATE.newsStamp=c.newsStamp||0; return true;
+    }
+  }catch(e){}
+  return false;
+}
+function isoDay(d){ return d.getFullYear()+String(d.getMonth()+1).padStart(2,"0")+String(d.getDate()).padStart(2,"0"); }
+async function loadScores(){
+  const now=new Date(), end=new Date(Date.now()+30*864e5);   // 7 days is empty in pre-season
+  const win=`${isoDay(now)}-${isoDay(end)}`;
+  const out=await Promise.all(COMPS.map(c=>
+    fetchJSON(`${ESPN}/${c.slug}/scoreboard?dates=${win}&limit=100`).then(d=>({c,d})).catch(()=>null)));
+  const all=[];
+  out.forEach(r=>{ if(r&&r.d&&r.d.events) r.d.events.forEach(e=>{const m=mapMatch(e,r.c); if(m) all.push(m);}); });
+  // ok = at least one request actually answered. An empty list is a valid answer
+  // (pre-season), a total failure is not — the chip must be able to tell them apart.
+  return {ok:out.some(r=>r&&r.d), list:all.sort((a,b)=>a.ts-b.ts)};
+}
+async function loadTables(){
+  const out=await Promise.all(TABLE_COMPS.map(c=>
+    fetchJSON(`${WEB}/${c.slug}/standings?season=${SEASON}`).then(d=>({c,rows:parseTable(d)})).catch(()=>null)));
+  return out.filter(x=>x&&x.rows.length).map(x=>({label:x.c.label,rows:x.rows}));
+}
+async function load(){
+  const now=Date.now();
+  const jobs=[loadScores().catch(()=>({ok:false,list:[]}))];
+  // Videos + news are on a slower clock: the proxy is fragile and GDELT allows
+  // roughly one request every 5 seconds, so we never burst them.
+  const doSlow = now-STATE.vidStamp>SLOW_MS || !STATE.footy.length;
+  if(doSlow){
+    jobs.push(retryWithBackoff(`${YT}playlist_id=${FOOTY_PLAYLIST}`).catch(()=>null));
+    jobs.push(retryWithBackoff(`${YT}channel_id=${GOLAZO_CHANNEL}`).catch(()=>null));
+    jobs.push(fetchJSON(`${GDELT}?query=${encodeURIComponent('(soccer OR "premier league" OR "champions league" OR uefa OR fifa) sourcelang:english')}&mode=artlist&maxrecords=40&format=json&sort=datedesc`).catch(()=>null));
+  }
+  const res=await Promise.all(jobs);
+  const sc=res[0]||{ok:false,list:[]};
+  let fetched=sc.ok;                       // did anything at all come back this cycle?
+  if(sc.ok) STATE.scores=sc.list;
+  if(doSlow){
+    const f=parseFeed(res[1]), ch=parseFeed(res[2]), nw=parseNews(res[3]);
+    STATE.vidsFresh=!!(f.length||ch.length);
+    if(f.length){ STATE.footy=f; STATE.vidSrc="live"; }
+    if(ch.length){ STATE.channel=ch; }
+    if(f.length||ch.length) STATE.vidStamp=now;
+    // every proxy failed and we have nothing cached -> use the build-time snapshot
+    if(!f.length&&!STATE.footy.length){ STATE.footy=fromSnap(SNAP.footy); STATE.vidSrc="snapshot"; }
+    if(!ch.length&&!STATE.channel.length){ STATE.channel=fromSnap(SNAP.channel); }
+    if(!f.length&&STATE.vidSrc!=="snapshot"&&STATE.footy.length) STATE.vidSrc="cache";
+    if(nw.length){ STATE.news=nw; STATE.newsStamp=now; }
+    if(f.length||ch.length||nw.length) fetched=true;
+  }
+  const good=fetched;                      // freshness, not "do we have anything on screen"
+  if(good){ STATE.stamp=now; STATE.ok=true; saveCache(); } else STATE.ok=false;
+  return good;
+}
+async function ensureTables(){
+  if(STATE.tables.length && Date.now()-STATE.tblStamp<TABLES_MS) return;
+  const t=await loadTables().catch(()=>[]);
+  if(t.length){ STATE.tables=t; STATE.tblStamp=Date.now(); saveCache(); }
+  renderTables();
+}
+
+/* ============ DERIVED ============ */
+function ago(ts){
+  if(!ts) return "";
+  const s=Math.max(0,Math.floor((Date.now()-ts)/1000));
+  if(s<90) return "just now";
+  const m=Math.floor(s/60); if(m<60) return m+"m ago";
+  const h=Math.floor(m/60); if(h<24) return h+"h ago";
+  const d=Math.floor(h/24); return d===1?"yesterday":d+"d ago";
+}
+function fmtDay(ts){ return new Date(ts).toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"}); }
+function fmtTime(ts){ return new Date(ts).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}); }
+// Cached news predates any parser change, so filter + tidy on the way OUT too.
+// This is the single source the UI reads; parseNews is just the first pass.
+function tidy(t){ return String(t||"").replace(/\s+([,.:;!?%])/g,"$1").replace(/\s{2,}/g," ").trim(); }
+function newsList(){
+  const all=(STATE.news||[]).map(a=>({...a,title:tidy(a.title)}));
+  const soccer=all.filter(isSoccer);
+  return soccer.length?soccer:all;
+}
+const liveMatches=()=>STATE.scores.filter(m=>m.live);
+const todaysMatches=()=>{const d=new Date().toDateString();return STATE.scores.filter(m=>new Date(m.ts).toDateString()===d)};
+
+/* ============ RENDER ============ */
+function setChip(cls,txt){ const c=$("#chip"); c.className="chip "+cls; $("#chipTxt").textContent=txt; }
+
+// Metadata card only — thumbnail, title, time. The whole card is a link out to YouTube.
+function videoCard(v){
+  return `<a class="vid" href="${esc(v.url)}" target="_blank" rel="noopener">
+    <div class="thumb"><img loading="lazy" src="${esc(v.thumb)}" alt=""><span class="play">▶</span></div>
+    <div class="vtx"><div class="vt">${esc(v.title)}</div>
+    <div class="vm">${esc(ago(v.ts))}${v.ts?` · ${esc(fmtDay(v.ts))}`:""} · YouTube ↗</div></div></a>`;
+}
+function renderFooty(){
+  const el=$("#footyEl");
+  if(!STATE.footy.length){ el.innerHTML=`<div class="note warn">Morning Footy feed unavailable right now — it loads through a public proxy that rate-limits. It'll fill in on the next refresh.</div>`; return; }
+  const src=STATE.vidSrc;
+  el.innerHTML=`<div class="note">🎙️ <b>Morning Footy</b> — CBS Golazo's weekday show. ${STATE.footy.length} latest segments; tap any to watch on YouTube.${src==="snapshot"?` <b>Snapshot from ${esc(SNAP.date)}</b> — YouTube's feed needs a public proxy and none answered, so these are the segments captured when the app was built. Tap still opens the real video.`:(src==="cache"?" <b>Showing cached items</b> — the feed proxy didn't answer this time.":"")}</div>`
+    +STATE.footy.map(videoCard).join("");
+}
+function renderChannel(){
+  const el=$("#channelEl");
+  if(!STATE.channel.length){ el.innerHTML=`<div class="note warn">Channel feed unavailable right now — retrying on the next refresh.</div>`; return; }
+  el.innerHTML=`<div class="note">📺 <b>CBS Sports Golazo</b> — the channel's latest uploads. Its output right now leans heavily to NWSL and WAFCON, so expect women's soccer alongside the men's.</div>`
+    +STATE.channel.map(videoCard).join("");
+}
+function renderNews(){
+  const el=$("#newsEl"); const list=newsList();
+  if(!list.length){ el.innerHTML=`<div class="note warn">Headlines unavailable — the news source limits how often it can be queried. Retrying shortly.</div>`; return; }
+  let h=`<div class="note">📰 <b>${list.length} soccer headlines</b> from across the press, newest first. Each opens on the publisher's own site — nothing is reproduced here.</div>`;
+  list.forEach(a=>{
+    h+=`<a class="news" href="${esc(a.url)}" target="_blank" rel="noopener">
+      <div class="ntx"><div class="nt">${esc(a.title)}</div>
+      <div class="nm">${esc(a.domain)} · ${esc(ago(a.ts))} ↗</div></div></a>`;
+  });
+  el.innerHTML=h;
+}
+function matchRow(m){
+  const mid=(m.final||m.live)
+    ? `<div class="sc">${m.home.sc==null?"–":m.home.sc} – ${m.away.sc==null?"–":m.away.sc}</div>
+       <div class="tm ${m.live?"on":""}">${esc(m.live?(m.detail||"LIVE"):"FT")}</div>`
+    : `<div class="sc" style="font-size:13px">${esc(fmtTime(m.ts))}</div><div class="tm">${esc(fmtDay(m.ts))}</div>`;
+  return `<div class="lg ${m.live?"sox":""}">
+    <div class="side"><span>${esc(m.home.name)}</span></div>
+    <div class="mid">${mid}</div>
+    <div class="side r"><span>${esc(m.away.name)}</span></div></div>`;
+}
+function renderScores(){
+  const el=$("#scoresEl");
+  if(!STATE.scores.length){ el.innerHTML=`<div class="note warn">⚽ No fixtures in the next month across the six competitions — most of Europe is between seasons right now.</div>`; return; }
+  const live=liveMatches(), today=todaysMatches();
+  let h=`<div class="note">⚽ <b>${STATE.scores.length} matches</b> over the next month across the Premier League, LaLiga, Serie A, Bundesliga, Ligue 1 and the Champions League${live.length?` · <b>${live.length} live now</b>`:""}.</div>`;
+  if(live.length) h+=`<div class="card"><h2>🔴 Live</h2>${live.map(matchRow).join("")}</div>`;
+  if(today.length&&!live.length) h+=`<div class="card"><h2>📆 Today</h2>${today.map(matchRow).join("")}</div>`;
+  const byComp={};
+  STATE.scores.forEach(m=>{ (byComp[m.comp]=byComp[m.comp]||[]).push(m); });
+  Object.keys(byComp).forEach(k=>{
+    h+=`<div class="divhd">${esc(k)} · ${byComp[k].length}</div>`;
+    let day="";
+    byComp[k].forEach(m=>{
+      const d=fmtDay(m.ts);
+      if(d!==day){ day=d; h+=`<div class="daylbl">${esc(d)}</div>`; }
+      h+=matchRow(m);
+    });
+  });
+  el.innerHTML=h;
+}
+function renderTables(){
+  const el=$("#tablesEl");
+  if(!STATE.tables.length){ el.innerHTML=`<div class="note">📊 Loading tables…</div>`; return; }
+  let h=`<div class="note">📊 <b>League tables</b> — live from ESPN. Zone colours come from the feed's own qualification notes, so they stay right when UEFA's allocations change.</div>`;
+  STATE.tables.forEach(t=>{
+    const pre=!t.rows.some(r=>r.gp>0);
+    h+=`<div class="divhd">${esc(t.label)}${pre?" · pre-season":""}</div><div class="card" style="margin-top:4px"><div class="tblwrap"><table><thead><tr>
+      <th></th><th style="text-align:left">Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead><tbody>`;
+    t.rows.forEach(r=>{
+      const zs=(!pre&&r.note&&r.note.color)?` style="box-shadow:inset 3px 0 0 ${esc(r.note.color)};background:${esc(r.note.color)}33"`:"";
+      h+=`<tr><td class="pos"${zs} title="${esc((r.note&&r.note.desc)||"")}">${r.pos}</td>
+        <td class="team">${esc(r.name)}</td><td>${r.gp}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td>
+        <td>${r.gd>0?"+":""}${r.gd}</td><td class="pts">${r.pts}</td></tr>`;
+    });
+    h+=`</tbody></table></div></div>`;
+  });
+  el.innerHTML=h;
+}
+
+function renderTicker(){
+  const items=[];
+  liveMatches().forEach(m=>items.push(`🔴 <b>${esc(m.home.name)} ${m.home.sc}–${m.away.sc} ${esc(m.away.name)}</b> <span class="mut">${esc(m.detail||"LIVE")}</span>`));
+  STATE.footy.slice(0,3).forEach(v=>items.push(`🎙️ <b>${esc(v.title.slice(0,72))}</b> <span class="mut">${esc(ago(v.ts))}</span>`));
+  newsList().slice(0,4).forEach(a=>items.push(`📰 ${esc(a.title.slice(0,80))} <span class="mut">${esc(a.domain)}</span>`));
+  const nx=STATE.scores.find(m=>m.state==="pre");
+  if(nx) items.push(`⚽ Next: ${esc(nx.home.name)} v ${esc(nx.away.name)} <span class="mut">${esc(nx.comp)} · ${esc(fmtDay(nx.ts))}</span>`);
+  if(!items.length) items.push(`⚽ Golazo <span class="mut">Morning Footy &amp; soccer news</span>`);
+  const one=items.map(t=>`<span class="ticker-item">${t}</span>`).join("");
+  $("#tickerTrack").innerHTML=one+one;   // duplicated so the marquee loops seamlessly
+}
+
+function renderAll(){ renderFooty(); renderChannel(); renderNews(); renderScores(); renderTicker();
+  if(STATE.tables.length) renderTables();
+  $("#cntBadge").textContent=STATE.footy.length?`${STATE.footy.length} segments`:"Morning Footy";
+  $("#subLine").textContent=STATE.news.length?`${newsList().length} headlines · ${STATE.scores.length} fixtures`:"soccer news, scores & tables";
+}
+
+/* ============ REFRESH + NAV + INIT ============ */
+async function refresh(){
+  setChip("load","Updating…");
+  const ok=await load();
+  const t=new Date().toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
+  if(ok&&STATE.vidsFresh) setChip("live","Live · "+t);
+  else if(ok) setChip("snap","Live scores · videos cached");
+  else if(STATE.footy.length||STATE.news.length) setChip("snap","Offline · last update "+(STATE.stamp?new Date(STATE.stamp).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):"unknown"));
+  else setChip("err","No data — check connection");
+  renderAll();
+}
+
+document.querySelectorAll("nav button").forEach(b=>{b.onclick=()=>{
+  document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));
+  document.querySelectorAll("section").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on"); $("#"+b.dataset.t).classList.add("on"); window.scrollTo(0,0);
+  if(b.dataset.t==="tables") ensureTables();     // lazy: 5 extra calls only when asked for
+};});
+$("#refreshBtn").onclick=refresh;
+
+if(loadCache()){ setChip("snap","Cached — updating…"); renderAll(); }
+refresh();
+setInterval(refresh,60000);
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden) refresh(); });
+
+// PWA service worker
+if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+</script>
+</body>
+</html>

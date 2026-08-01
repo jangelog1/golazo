@@ -1,0 +1,14 @@
+{
+  "name": "Golazo — Morning Footy & Soccer News",
+  "short_name": "Golazo",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#04140c",
+  "theme_color": "#04140c",
+  "icons": [
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
