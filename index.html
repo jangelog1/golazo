@@ -444,6 +444,20 @@ async function loadTables(){
     fetchJSON(`${WEB}/${c.slug}/standings?season=${SEASON}`).then(d=>({c,rows:parseTable(d)})).catch(()=>null)));
   return out.filter(x=>x&&x.rows.length).map(x=>({label:x.c.label,rows:x.rows}));
 }
+// GDELT is CORS-open, but it was unreachable from the deployed origin on first try.
+// Fall back to the same proxy chain the video feeds use before giving up.
+async function fetchNews(){
+  const url=`${GDELT}?query=${encodeURIComponent('(soccer OR "premier league" OR "champions league" OR uefa OR fifa) sourcelang:english')}&mode=artlist&maxrecords=40&format=json&sort=datedesc`;
+  try{ const d=await fetchJSON(url); if(d&&d.articles&&d.articles.length) return d; }catch(e){}
+  for(const mk of PROXIES){
+    try{
+      const r=await fetch(mk(url),{cache:"no-store"});
+      if(r.ok){ const t=await r.text(); const d=JSON.parse(t); if(d&&d.articles&&d.articles.length) return d; }
+    }catch(e){}
+  }
+  return null;
+}
+
 async function load(){
   const now=Date.now();
   const jobs=[loadScores().catch(()=>({ok:false,list:[]}))];
@@ -453,7 +467,7 @@ async function load(){
   if(doSlow){
     jobs.push(retryWithBackoff(`${YT}playlist_id=${FOOTY_PLAYLIST}`).catch(()=>null));
     jobs.push(retryWithBackoff(`${YT}channel_id=${GOLAZO_CHANNEL}`).catch(()=>null));
-    jobs.push(fetchJSON(`${GDELT}?query=${encodeURIComponent('(soccer OR "premier league" OR "champions league" OR uefa OR fifa) sourcelang:english')}&mode=artlist&maxrecords=40&format=json&sort=datedesc`).catch(()=>null));
+    jobs.push(fetchNews().catch(()=>null));
   }
   const res=await Promise.all(jobs);
   const sc=res[0]||{ok:false,list:[]};

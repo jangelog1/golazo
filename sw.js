@@ -1,4 +1,4 @@
-const CACHE = 'golazo-v1';
+const CACHE = 'golazo-v2';
 const ASSETS = ['./', 'index.html', 'icon-512.png', 'manifest.webmanifest'];
 
 self.addEventListener('install', e => {
