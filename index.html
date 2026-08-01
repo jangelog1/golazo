@@ -334,7 +334,7 @@ async function feedVideos(url){
     if(d&&d.status==="ok"&&(d.items||[]).length){
       return d.items.map(i=>{
         const id=((i.link||"").split("watch?v=")[1]||"").split("&")[0];
-        return id?{id,title:i.title||"",url:`https://www.youtube.com/watch?v=${id}`,
+        return id?{id,title:tidy(i.title),url:`https://www.youtube.com/watch?v=${id}`,
           thumb:`https://i.ytimg.com/vi/${id}/mqdefault.jpg`,
           ts:new Date((i.pubDate||"").replace(" ","T")+"Z").getTime()||0}:null;
       }).filter(Boolean).sort((a,b)=>b.ts-a.ts);
@@ -359,7 +359,7 @@ async function retryWithBackoff(url,rounds){
    proxy is down. Titles + ids + timestamps only — the cards still link out to YouTube. */
 const SNAP={"date":"2026-08-01","footy":[{"id":"PFclUh1EpiA","t":"A New Era at Tottenham: De Zerbi’s Plan to Revive Spurs","d":"2026-07-31T15:40:45+00:00"},{"id":"c2mre62OlVM","t":"CONCACAF & AFC Join UEFA in Opposing FIFA's plan for the World Cup | Will anyone else follow?","d":"2026-07-31T15:09:18+00:00"},{"id":"X_xs5TvJ4VY","t":"UEFA to BOYCOTT FIFA World Cup | Will Anyone Else Follow? | Everything you need to know EXPLAINED!","d":"2026-07-30T16:15:30+00:00"},{"id":"7EJmyuPHv4Y","t":"Eddie Howe LEAVES Newcastle... What Happens Next?","d":"2026-07-30T15:33:31+00:00"},{"id":"grgGYKqwg5w","t":"Barcelona two BIG signings | How will Gordon & Adeyemi fit into the team?","d":"2026-07-30T15:15:36+00:00"},{"id":"bvi5c_LO03I","t":"New Club. New Pressure. Can These Managers Deliver? 🧐","d":"2026-07-30T14:41:14+00:00"},{"id":"Fe7004p-M_g","t":"Arsenal's Piero Hincapié discusses Premier League title + 2026/27 season preview","d":"2026-07-29T16:14:29+00:00"},{"id":"M-c70Ss9Sbk","t":"Morning Footy LIVE: FIFA selling stake in the WORLD CUP","d":"2026-07-29T16:04:02+00:00"},{"id":"2n201omvRMA","t":"What is the FFE? What are FIFA's plans with Private Investors? Everything you NEED to Know Explained","d":"2026-07-29T15:53:37+00:00"},{"id":"AE6XbA7mekM","t":"Will Real Madrid be UNSTOPPABLE this Season? | 2026-2027 La Liga Season Preview","d":"2026-07-28T16:46:15+00:00"},{"id":"LXKymDDKEQQ","t":"CHELSEA 2026-2027 Season PREVIEW","d":"2026-07-28T15:27:23+00:00"},{"id":"mh75VhtkAfw","t":"PREVIEWING the 2026/27 English Premier League","d":"2026-07-27T16:06:22+00:00"},{"id":"62QTUstssQo","t":"ARSENAL 2026-2027 Season PREVIEW","d":"2026-07-27T15:08:24+00:00"},{"id":"8ZuQxS3lBlY","t":"Is Marc Cucurella the BEST FULLBACK in the World? 🇪🇸👑","d":"2026-07-23T15:16:37+00:00"}],"channel":[{"id":"6UDgd5nL6K0","t":"How Esther González’s Departure Impacts Gotham FC 🗽 | NWSL CheckIns & WAFCON Recap | Attacking Third","d":"2026-07-31T03:58:40+00:00"},{"id":"PaDVoliE2Fw","t":"NWSL Summer Check-In: Looking at EVERY team in the top 8 of this NWSL season","d":"2026-07-30T20:42:47+00:00"},{"id":"-KtxOEMykJs","t":"Bay FC vs. Gotham FC: Extended Highlights | NWSL | W Golazo","d":"2026-07-30T04:25:22+00:00"},{"id":"W3-J5x-vCVY","t":"Kansas City Current vs. Racing Louisville FC: Extended Highlights | NWSL | W Golazo","d":"2026-07-30T02:25:07+00:00"},{"id":"k8cWOVvZ35k","t":"San Diego Wave FC vs. Seattle Reign FC: Extended Highlights | NWSL | W Golazo","d":"2026-07-26T23:18:53+00:00"},{"id":"gFKmOAONlko","t":"NWSL Summer Check-ins | Weekend Preview: Spirit vs Summit, Gotham vs Thorns | Attacking Third","d":"2026-07-24T03:57:34+00:00"},{"id":"j2XXkq3aM3k","t":"Racing Louisville, Chicago, Boston and More: Summer Verdict","d":"2026-07-23T19:08:10+00:00"},{"id":"B7W370QlcZk","t":"WAY TOO EARLY 2027 Women's World Cup Predictions","d":"2026-07-23T18:33:24+00:00"},{"id":"VlQ83nsGgcE","t":"NWSL Team of the WEEK | Croix Bethune & Trinity Byars SHOW OUT","d":"2026-07-20T19:57:30+00:00"},{"id":"ijtPEvSavXI","t":"Can Gotham FC Stay Hot? Heaps Makes Her Mark in Denver | NWSL Matchweek 13 Recap","d":"2026-07-20T02:17:52+00:00"}]};
 function fromSnap(list){
-  return (list||[]).map(v=>({id:v.id,title:v.t,url:`https://www.youtube.com/watch?v=${v.id}`,
+  return (list||[]).map(v=>({id:v.id,title:tidy(v.t),url:`https://www.youtube.com/watch?v=${v.id}`,
     thumb:`https://i.ytimg.com/vi/${v.id}/mqdefault.jpg`,ts:new Date(v.d).getTime()||0}))
     .sort((a,b)=>b.ts-a.ts);
 }
@@ -381,7 +381,7 @@ function parseFeed(xml){
     const id=(link.split("watch?v=")[1]||"").split("&")[0];
     const title=get("title")||"";
     const published=get("published")||get("updated")||"";
-    return id?{id,title,url:`https://www.youtube.com/watch?v=${id}`,
+    return id?{id,title:tidy(title),url:`https://www.youtube.com/watch?v=${id}`,
       thumb:`https://i.ytimg.com/vi/${id}/mqdefault.jpg`,
       ts:new Date(published).getTime()||0}:null;
   }).filter(Boolean).sort((a,b)=>b.ts-a.ts);
@@ -514,7 +514,14 @@ function fmtDay(ts){ return new Date(ts).toLocaleDateString(undefined,{weekday:"
 function fmtTime(ts){ return new Date(ts).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}); }
 // Cached news predates any parser change, so filter + tidy on the way OUT too.
 // This is the single source the UI reads; parseNews is just the first pass.
-function tidy(t){ return String(t||"").replace(/\s+([,.:;!?%])/g,"$1").replace(/\s{2,}/g," ").trim(); }
+function decodeEnt(t){
+  return String(t||"")
+    .replace(/&#(\d+);/g,(m,n)=>String.fromCharCode(+n))
+    .replace(/&#x([0-9a-f]+);/gi,(m,n)=>String.fromCharCode(parseInt(n,16)))
+    .replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&nbsp;/g," ")
+    .replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&amp;/g,"&");
+}
+function tidy(t){ return decodeEnt(t).replace(/\s+([,.:;!?%])/g,"$1").replace(/\s{2,}/g," ").trim(); }
 function newsList(){ return (STATE.news||[]).map(a=>({...a,title:tidy(a.title)})); }
 const liveMatches=()=>STATE.scores.filter(m=>m.live);
 const todaysMatches=()=>{const d=new Date().toDateString();return STATE.scores.filter(m=>new Date(m.ts).toDateString()===d)};
