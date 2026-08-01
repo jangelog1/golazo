@@ -245,13 +245,13 @@
 
 <div class="ticker">
   <div class="ticker-row">
-    <span class="ticker-lbl">⚽ Golazo</span>
+    <span class="ticker-lbl">🧤 Golazo</span>
     <div class="ticker-mask"><div class="ticker-track" id="tickerTrack"></div></div>
   </div>
 </div>
 
 <header>
-  <div class="bigsock">⚽</div>
+  <div class="bigsock">🧤</div>
   <h1>Golazo <span class="badge" id="cntBadge">Morning Footy</span></h1>
   <div class="sub">CBS Sports Golazo · <b>Morning Footy</b> · <span id="subLine">soccer news, scores &amp; tables</span></div>
   <div class="statusbar">
@@ -278,7 +278,7 @@
 
 <div class="wrap">
   <div class="foot">
-    Videos are listed from the public YouTube feeds of <a href="https://www.youtube.com/@cbssportsgolazo" target="_blank" rel="noopener">CBS Sports Golazo</a> — title, thumbnail and publish time only; tap any card to watch it on YouTube, where it belongs. Headlines come from <a href="https://www.gdeltproject.org" target="_blank" rel="noopener">GDELT</a> and open on the publisher's own site. <b>No transcripts, descriptions or article text are reproduced here</b> — this is an index that points at the originals. Scores and tables are live from <a href="https://www.espn.com/soccer/" target="_blank" rel="noopener">ESPN</a>. Unofficial personal dashboard; not affiliated with CBS, Paramount, YouTube or ESPN.
+    Videos are listed from the public YouTube feeds of <a href="https://www.youtube.com/@cbssportsgolazo" target="_blank" rel="noopener">CBS Sports Golazo</a> — title, thumbnail and publish time only; tap any card to watch it on YouTube, where it belongs. Headlines come from the public news feeds of CBS Sports, ESPN, BBC Sport, Sky Sports and the Guardian, and open on the publisher's own site. <b>No transcripts, descriptions or article text are reproduced here</b> — this is an index that points at the originals. Scores and tables are live from <a href="https://www.espn.com/soccer/" target="_blank" rel="noopener">ESPN</a>. Unofficial personal dashboard; not affiliated with CBS, Paramount, YouTube or ESPN.
   </div>
 </div>
 
@@ -298,7 +298,17 @@ const PROXIES=[
 const YT="https://www.youtube.com/feeds/videos.xml?";
 const FOOTY_PLAYLIST="PLkwBiY2Dq-oaIgGBBi6zuPX0_4OH-E4mh";   // Morning Footy show playlist
 const GOLAZO_CHANNEL="UCX_tjI6Q_4JD1E3234CwemA";             // CBS Sports Golazo
-const GDELT="https://api.gdeltproject.org/api/v2/doc/doc";
+// rss2json reads any RSS/Atom feed and answers with CORS `*` and no key — it handles both
+// YouTube's feeds and the outlets' news feeds, removing the flaky-proxy dependency and
+// GDELT's ~1-request-per-5s limit in one move. Proxy chain + snapshot remain as fallbacks.
+const RSS2JSON="https://api.rss2json.com/v1/api.json?rss_url=";
+const NEWS_FEEDS=[
+  {url:"https://www.cbssports.com/rss/headlines/soccer/", src:"CBS Sports"},
+  {url:"https://www.espn.com/espn/rss/soccer/news",       src:"ESPN"},
+  {url:"https://feeds.bbci.co.uk/sport/football/rss.xml", src:"BBC Sport"},
+  {url:"https://www.skysports.com/rss/11095",             src:"Sky Sports"},
+  {url:"https://www.theguardian.com/football/rss",        src:"The Guardian"}
+];
 const ESPN="https://site.api.espn.com/apis/site/v2/sports/soccer";
 const WEB="https://site.web.api.espn.com/apis/v2/sports/soccer";
 const SEASON=2026;
@@ -317,6 +327,21 @@ const TABLES_MS=10*60*1000;   // tables: lazy, then every 10 min while visible
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 async function fetchJSON(u){ const r=await fetch(u,{cache:"no-store"}); if(!r.ok) throw new Error(r.status); return r.json(); }
+// rss2json hands back the feed already parsed; fall back to raw XML through the proxies.
+async function feedVideos(url){
+  try{
+    const d=await fetchJSON(RSS2JSON+encodeURIComponent(url));
+    if(d&&d.status==="ok"&&(d.items||[]).length){
+      return d.items.map(i=>{
+        const id=((i.link||"").split("watch?v=")[1]||"").split("&")[0];
+        return id?{id,title:i.title||"",url:`https://www.youtube.com/watch?v=${id}`,
+          thumb:`https://i.ytimg.com/vi/${id}/mqdefault.jpg`,
+          ts:new Date((i.pubDate||"").replace(" ","T")+"Z").getTime()||0}:null;
+      }).filter(Boolean).sort((a,b)=>b.ts-a.ts);
+    }
+  }catch(e){}
+  return parseFeed(await retryWithBackoff(url));
+}
 async function retryWithBackoff(url,rounds){
   rounds=rounds||2;
   for(let r=0;r<rounds;r++){
@@ -360,32 +385,6 @@ function parseFeed(xml){
       thumb:`https://i.ytimg.com/vi/${id}/mqdefault.jpg`,
       ts:new Date(published).getTime()||0}:null;
   }).filter(Boolean).sort((a,b)=>b.ts-a.ts);
-}
-// GDELT's "soccer" query pulls in the occasional unrelated story, and its rate limit
-// (~1 request / 5s) makes query tuning expensive. Filtering titles client-side costs
-// nothing extra; if the filter is too aggressive we keep the raw list rather than
-// showing an empty tab.
-// Deliberately STRONG terms only. "united", "city", "club", "transfer" and "manager" were
-// in an earlier version and matched "United States", "…city…" and a Senate race — relevance
-// beats volume here, so a short honest list is better than a padded one.
-const SOCCER_KW=["soccer","fifa","uefa","premier league","la liga","laliga","serie a","bundesliga",
- "ligue 1","champions league","europa league","conference league","world cup","concacaf","copa ",
- "mls ","nwsl","ballon d'or","matchday","striker","midfielder","goalkeeper","offside","penalty kick",
- "football club","footballer","transfer window","manchester","liverpool","arsenal","chelsea","tottenham",
- "barcelona","real madrid","bayern","juventus","psg","inter milan","ac milan","atletico"];
-function isSoccer(a){
-  const t=(a.title||"").toLowerCase();
-  return SOCCER_KW.some(k=>t.indexOf(k)>=0);
-}
-function parseNews(d){
-  const all=((d&&d.articles)||[]).map(a=>{
-    // GDELT stamps look like 20260731T224500Z
-    const s=a.seendate||"";
-    const iso=s.length>=15?`${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}T${s.slice(9,11)}:${s.slice(11,13)}:${s.slice(13,15)}Z`:"";
-    return {title:String(a.title||"").replace(/\s+([,.:;!?%])/g,"$1").replace(/\s{2,}/g," ").trim(),url:a.url||"",domain:a.domain||"",img:a.socialimage||"",ts:new Date(iso).getTime()||0};
-  }).filter(a=>a.title&&a.url).sort((a,b)=>b.ts-a.ts);
-  const soccer=all.filter(isSoccer);
-  return soccer.length?soccer:all;
 }
 function mapMatch(e,comp){
   const c=e&&e.competitions&&e.competitions[0]; if(!c) return null;
@@ -444,37 +443,42 @@ async function loadTables(){
     fetchJSON(`${WEB}/${c.slug}/standings?season=${SEASON}`).then(d=>({c,rows:parseTable(d)})).catch(()=>null)));
   return out.filter(x=>x&&x.rows.length).map(x=>({label:x.c.label,rows:x.rows}));
 }
-// GDELT is CORS-open, but it was unreachable from the deployed origin on first try.
-// Fall back to the same proxy chain the video feeds use before giving up.
+// Kept as a last-resort fallback only; the RSS feeds above are the primary source.
 async function fetchNews(){
-  const url=`${GDELT}?query=${encodeURIComponent('(soccer OR "premier league" OR "champions league" OR uefa OR fifa) sourcelang:english')}&mode=artlist&maxrecords=40&format=json&sort=datedesc`;
-  try{ const d=await fetchJSON(url); if(d&&d.articles&&d.articles.length) return d; }catch(e){}
-  for(const mk of PROXIES){
-    try{
-      const r=await fetch(mk(url),{cache:"no-store"});
-      if(r.ok){ const t=await r.text(); const d=JSON.parse(t); if(d&&d.articles&&d.articles.length) return d; }
-    }catch(e){}
-  }
-  return null;
+  const out=await Promise.all(NEWS_FEEDS.map(f=>
+    fetchJSON(RSS2JSON+encodeURIComponent(f.url)).then(d=>({f,d})).catch(()=>null)));
+  const rows=[];
+  out.forEach(r=>{
+    if(!r||!r.d||r.d.status!=="ok") return;
+    (r.d.items||[]).forEach(i=>{
+      if(!i.title||!i.link) return;
+      // title + link + outlet + time ONLY — descriptions are deliberately never rendered
+      rows.push({title:tidy(i.title),url:i.link,domain:r.f.src,
+        ts:new Date((i.pubDate||"").replace(" ","T")+"Z").getTime()||0});
+    });
+  });
+  const seen=new Set();
+  return rows.filter(a=>{const k=a.title.toLowerCase();if(seen.has(k))return false;seen.add(k);return true})
+             .sort((a,b)=>b.ts-a.ts);
 }
 
 async function load(){
   const now=Date.now();
   const jobs=[loadScores().catch(()=>({ok:false,list:[]}))];
-  // Videos + news are on a slower clock: the proxy is fragile and GDELT allows
-  // roughly one request every 5 seconds, so we never burst them.
+  // Videos + news run on a slower clock than scores — no need to hammer the feed
+  // services every 60s when the show posts a few times a day.
   const doSlow = now-STATE.vidStamp>SLOW_MS || !STATE.footy.length;
   if(doSlow){
-    jobs.push(retryWithBackoff(`${YT}playlist_id=${FOOTY_PLAYLIST}`).catch(()=>null));
-    jobs.push(retryWithBackoff(`${YT}channel_id=${GOLAZO_CHANNEL}`).catch(()=>null));
-    jobs.push(fetchNews().catch(()=>null));
+    jobs.push(feedVideos(`${YT}playlist_id=${FOOTY_PLAYLIST}`).catch(()=>[]));
+    jobs.push(feedVideos(`${YT}channel_id=${GOLAZO_CHANNEL}`).catch(()=>[]));
+    jobs.push(fetchNews().catch(()=>[]));
   }
   const res=await Promise.all(jobs);
   const sc=res[0]||{ok:false,list:[]};
   let fetched=sc.ok;                       // did anything at all come back this cycle?
   if(sc.ok) STATE.scores=sc.list;
   if(doSlow){
-    const f=parseFeed(res[1]), ch=parseFeed(res[2]), nw=parseNews(res[3]);
+    const f=res[1]||[], ch=res[2]||[], nw=res[3]||[];
     STATE.vidsFresh=!!(f.length||ch.length);
     if(f.length){ STATE.footy=f; STATE.vidSrc="live"; }
     if(ch.length){ STATE.channel=ch; }
@@ -511,11 +515,7 @@ function fmtTime(ts){ return new Date(ts).toLocaleTimeString(undefined,{hour:"nu
 // Cached news predates any parser change, so filter + tidy on the way OUT too.
 // This is the single source the UI reads; parseNews is just the first pass.
 function tidy(t){ return String(t||"").replace(/\s+([,.:;!?%])/g,"$1").replace(/\s{2,}/g," ").trim(); }
-function newsList(){
-  const all=(STATE.news||[]).map(a=>({...a,title:tidy(a.title)}));
-  const soccer=all.filter(isSoccer);
-  return soccer.length?soccer:all;
-}
+function newsList(){ return (STATE.news||[]).map(a=>({...a,title:tidy(a.title)})); }
 const liveMatches=()=>STATE.scores.filter(m=>m.live);
 const todaysMatches=()=>{const d=new Date().toDateString();return STATE.scores.filter(m=>new Date(m.ts).toDateString()===d)};
 
@@ -545,7 +545,7 @@ function renderChannel(){
 function renderNews(){
   const el=$("#newsEl"); const list=newsList();
   if(!list.length){ el.innerHTML=`<div class="note warn">Headlines unavailable — the news source limits how often it can be queried. Retrying shortly.</div>`; return; }
-  let h=`<div class="note">📰 <b>${list.length} soccer headlines</b> from across the press, newest first. Each opens on the publisher's own site — nothing is reproduced here.</div>`;
+  let h=`<div class="note">📰 <b>${list.length} soccer headlines</b> from CBS Sports, ESPN, BBC, Sky and the Guardian, newest first. Each opens on the publisher's own site — nothing is reproduced here.</div>`;
   list.forEach(a=>{
     h+=`<a class="news" href="${esc(a.url)}" target="_blank" rel="noopener">
       <div class="ntx"><div class="nt">${esc(a.title)}</div>
@@ -609,7 +609,7 @@ function renderTicker(){
   newsList().slice(0,4).forEach(a=>items.push(`📰 ${esc(a.title.slice(0,80))} <span class="mut">${esc(a.domain)}</span>`));
   const nx=STATE.scores.find(m=>m.state==="pre");
   if(nx) items.push(`⚽ Next: ${esc(nx.home.name)} v ${esc(nx.away.name)} <span class="mut">${esc(nx.comp)} · ${esc(fmtDay(nx.ts))}</span>`);
-  if(!items.length) items.push(`⚽ Golazo <span class="mut">Morning Footy &amp; soccer news</span>`);
+  if(!items.length) items.push(`🧤 Golazo <span class="mut">Morning Footy &amp; soccer news</span>`);
   const one=items.map(t=>`<span class="ticker-item">${t}</span>`).join("");
   $("#tickerTrack").innerHTML=one+one;   // duplicated so the marquee loops seamlessly
 }
