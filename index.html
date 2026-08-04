@@ -317,6 +317,7 @@
 <div class="wrap">
   <div class="foot">
     Videos are listed from the public YouTube feeds of <a href="https://www.youtube.com/@cbssportsgolazo" target="_blank" rel="noopener">CBS Sports Golazo</a>. Each card carries an <b>original summary written for this page</b> from the segment's audio, plus <b>CBS's own published video description</b>, quoted and credited as theirs. <b>No transcript text is reproduced</b> — the summaries are original prose, far shorter than the source, and every card links to the full segment on YouTube, where it belongs. Headlines come from the public news feeds of CBS Sports, ESPN, BBC Sport, Sky Sports and the Guardian — <b>titles and links only</b> — and open on the publisher's own site. Scores and tables are live from <a href="https://www.espn.com/soccer/" target="_blank" rel="noopener">ESPN</a>. Unofficial personal dashboard; not affiliated with CBS, Paramount, YouTube or ESPN.
+    <br><span id="buildStamp" style="opacity:.55"></span>
   </div>
 </div>
 
@@ -364,6 +365,9 @@ const CACHE_KEY="golazo-cache-v3";   // v1 held unfiltered news; v2 predates `su
 // Same-origin, so no proxy and no rss2json — and sw.js already runtime-caches same-origin GETs,
 // which is why offline needs no service-worker change.
 const SUMS_URL="data/footy-summaries.json";
+// Shown in the footer purely so "is this phone on the current build?" is answerable by looking,
+// instead of by clearing caches and hoping. Bump it whenever the page itself changes.
+const BUILD="2026-08-04d";
 const SLOW_MS=5*60*1000;      // videos + news: every 5 min, not every 60s
 const TABLES_MS=10*60*1000;   // tables: lazy, then every 10 min while visible
 const $=s=>document.querySelector(s);
@@ -756,6 +760,7 @@ document.querySelectorAll("nav button").forEach(b=>{b.onclick=()=>{
   if(b.dataset.t==="tables") ensureTables();     // lazy: 5 extra calls only when asked for
 };});
 $("#refreshBtn").onclick=refresh;
+$("#buildStamp").textContent=`build ${BUILD}`;
 
 // Remember which cards are open so a re-render doesn't close them. `toggle` does not bubble,
 // so this has to listen in the capture phase on the container.
@@ -772,9 +777,28 @@ refresh();
 setInterval(refresh,60000);
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden) refresh(); });
 
-// PWA service worker
+/* PWA service worker.
+   updateViaCache:"none" is the important bit: without it the browser is allowed to check for a
+   new worker using its own HTTP-cached copy of the OLD one, and GitHub Pages sends max-age=600
+   on sw.js. That is how an installed Home Screen app gets stranded on a previous build, and why
+   force-quitting doesn't help — a force-quit clears no HTTP cache. */
 if("serviceWorker" in navigator && location.protocol.startsWith("http")){
-  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+  window.addEventListener("load",()=>{
+    navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(reg=>{
+      reg.update();
+      // Coming back to the app is exactly when a check is worth doing.
+      document.addEventListener("visibilitychange",()=>{ if(!document.hidden) reg.update(); });
+    }).catch(()=>{});
+  });
+  // A new worker taking control means the shell just changed underneath a page that is already
+  // running the old one. Reload once so what's on screen matches what was installed. The guard
+  // is what stops this becoming a reload loop.
+  let swReloaded=false;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{
+    if(swReloaded) return;
+    swReloaded=true;
+    location.reload();
+  });
 }
 </script>
 </body>
