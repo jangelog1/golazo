@@ -229,7 +229,14 @@
   .vid[open]:hover,.vid[open]:active{transform:none}
   .vid>summary{display:block;list-style:none;cursor:pointer}
   .vid>summary::-webkit-details-marker{display:none}   /* Safari draws its own triangle */
-  .vhd{display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:center}
+  .vhd{display:grid;grid-template-columns:150px 1fr auto;gap:12px;align-items:center}
+  /* The only thing distinguishing an expandable card from an outbound link. */
+  .vchev{color:var(--gold);font-size:17px;line-height:1;opacity:.75;padding-right:2px;
+    transition:transform .24s var(--ease)}
+  .vid[open] .vchev{transform:rotate(180deg)}
+  a.vid .vchev{color:var(--mut);font-size:14px}
+  /* nowrap so the hint drops to the next line whole, instead of splitting mid-phrase */
+  .vcue{font-size:10.5px;font-weight:700;color:var(--gold);opacity:.75;white-space:nowrap}
   .thumb{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#071f14}
   .thumb img{width:100%;height:100%;object-fit:cover;display:block}
   .thumb .play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
@@ -275,7 +282,9 @@
   .news:hover{background:var(--glass2);transform:translateX(3px);border-color:rgba(125,255,176,.28)}
   .nt{font-weight:700;font-size:13.5px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
   .nm{font-size:11px;color:var(--mut);margin-top:5px;font-weight:600}
-  @media (max-width:430px){ .vhd{grid-template-columns:124px 1fr;gap:10px} .vt{font-size:13px} }
+  /* The third column has to be redeclared here, or the chevron wraps onto its own row. */
+  @media (max-width:430px){ .vhd{grid-template-columns:112px 1fr auto;gap:9px} .vt{font-size:13px}
+    .vchev{font-size:15px} .vcue{font-size:10px} }
 
 </style>
 </head>
@@ -367,7 +376,7 @@ const CACHE_KEY="golazo-cache-v3";   // v1 held unfiltered news; v2 predates `su
 const SUMS_URL="data/footy-summaries.json";
 // Shown in the footer purely so "is this phone on the current build?" is answerable by looking,
 // instead of by clearing caches and hoping. Bump it whenever the page itself changes.
-const BUILD="2026-08-04d";
+const BUILD="2026-08-04g";
 const SLOW_MS=5*60*1000;      // videos + news: every 5 min, not every 60s
 const TABLES_MS=10*60*1000;   // tables: lazy, then every 10 min while visible
 const $=s=>document.querySelector(s);
@@ -597,6 +606,10 @@ function setChip(cls,txt){ const c=$("#chip"); c.className="chip "+cls; $("#chip
 // Which cards the reader has expanded. Held outside the markup because renderAll() rebuilds
 // innerHTML wholesale on the 60s scores tick — without this, an open card slams shut mid-read.
 const OPEN=new Set();
+// The cards look like the old link cards until you tap one, so the newest written summary opens
+// itself on arrival — otherwise the whole feature is invisible. Once only, and never against a
+// choice the reader has already made.
+let autoOpened=false;
 
 /* The write-up for a video, or null if there is nothing to expand. Both feeds carry uploads
    whose description field is still the literal placeholder "Description here" (3 of 29 on
@@ -616,19 +629,22 @@ function hasSums(){ for(const k in STATE.sums) return true; return false; }
 function videoCard(v){
   const s=sumFor(v);
   const when=`${esc(ago(v.ts))}${v.ts?` · ${esc(fmtDay(v.ts))}`:""}`;
-  const head=tail=>`<div class="vhd">
+  // `chev` is the affordance: without it an expandable card is indistinguishable from the old
+  // outbound-link card, and the summaries stay invisible until someone taps one by accident.
+  const head=(tail,chev)=>`<div class="vhd">
       <div class="thumb"><img loading="lazy" src="${esc(v.thumb)}" alt=""><span class="play">▶</span></div>
       <div class="vtx"><div class="vt">${esc(v.title)}</div>
       <div class="vm">${when} · ${tail}</div></div>
+      <span class="vchev">${chev}</span>
     </div>`;
-  if(!s) return `<a class="vid" href="${esc(v.url)}" target="_blank" rel="noopener">${head("YouTube ↗")}</a>`;
+  if(!s) return `<a class="vid" href="${esc(v.url)}" target="_blank" rel="noopener">${head("YouTube ↗","↗")}</a>`;
 
   // `secs` is the current shape (headline + emoji-headed sections); `sum` is the older flat
   // prose, still rendered so a part-migrated sidecar never shows a blank card.
   const secs=s.secs||[], written=!!(s.tldr||secs.length||s.sum);
-  const tag = written   ? `<span class="vtag">📝 Summary</span>`
+  const tag = written   ? `<span class="vtag">📝 Summary</span> <span class="vcue">tap to read</span>`
             : s.nosum   ? `<span class="vtag dim">No summary</span>`
-                        : `<span class="vtag dim">Description only</span>`;
+                        : `<span class="vtag dim">Description only</span> <span class="vcue">tap for details</span>`;
   const b=[];
   if(written){
     if(s.tldr) b.push(`<p class="vtl">⚡ ${esc(s.tldr)}</p>`);
@@ -648,10 +664,19 @@ function videoCard(v){
   if((s.chapters||[]).length) b.push(`<ul class="vch">${s.chapters.map(c=>`<li>⏱️ ${esc(c)}</li>`).join("")}</ul>`);
   b.push(`<a class="vlink" href="${esc(v.url)}" target="_blank" rel="noopener">▶️ Watch the full segment on YouTube ↗</a>`);
   return `<details class="vid" data-id="${esc(v.id)}"${OPEN.has(v.id)?" open":""}>`
-    +`<summary>${head(tag)}</summary><div class="vbody">${b.join("")}</div></details>`;
+    +`<summary>${head(tag,"▾")}</summary><div class="vbody">${b.join("")}</div></details>`;
+}
+/* Open the newest card that actually has a write-up, once per page load. Without it the tab
+   looks exactly like the old link list and the summaries are never found. Skipped entirely if
+   the reader has already opened or closed anything themselves. */
+function autoOpenFirst(){
+  if(autoOpened||OPEN.size) return;
+  const first=(STATE.footy||[]).find(v=>{ const s=sumFor(v); return s&&(s.tldr||(s.secs||[]).length||s.sum); });
+  if(first){ OPEN.add(first.id); autoOpened=true; }
 }
 function renderFooty(){
   const el=$("#footyEl");
+  autoOpenFirst();
   if(!STATE.footy.length){ el.innerHTML=`<div class="note warn">Morning Footy feed unavailable right now — it loads through a public proxy that rate-limits. It'll fill in on the next refresh.</div>`; return; }
   const src=STATE.vidSrc;
   el.innerHTML=`<div class="note">🎙️ <b>Morning Footy</b> — CBS Golazo's weekday show. ${STATE.footy.length} latest segments; ${hasSums()?"tap a card to read it.":"tap any to watch on YouTube."}${STATE.sumUpdated?` Write-ups updated ${esc(STATE.sumUpdated)}.`:""}${src==="snapshot"?` <b>Snapshot from ${esc(SNAP.date)}</b> — YouTube's feed needs a public proxy and none answered, so these are the segments captured when the app was built. Tap still opens the real video.`:(src==="cache"?" <b>Showing cached items</b> — the feed proxy didn't answer this time.":"")}</div>`
