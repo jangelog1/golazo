@@ -215,13 +215,21 @@
     .card:hover,.grow:hover,.lg:hover{transform:none}
   }
 
-  /* VIDEO CARDS — the whole card is an outbound link to YouTube */
-  .vid{display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:center;text-decoration:none;color:inherit;
+  /* VIDEO CARDS — a <details> you expand to read the segment when we have a write-up for it,
+     and a plain outbound link when we don't. `.vhd` is the always-visible header row (thumb +
+     title) in BOTH cases, so the two share one grid; `.vbody` is the expanded reading pane. */
+  .vid{display:block;text-decoration:none;color:inherit;
     padding:10px;margin-bottom:8px;border-radius:var(--rs);border:1px solid transparent;
     background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
     transition:background .28s var(--ease),transform .28s var(--ease),border-color .28s var(--ease)}
   .vid:hover{background:var(--glass2);transform:translateY(-2px);border-color:rgba(125,255,176,.3)}
   .vid:active{transform:scale(.99)}
+  /* An open card must not lift or scale under the cursor — it would shift while being read. */
+  .vid[open]{background:var(--glass2);border-color:rgba(125,255,176,.22)}
+  .vid[open]:hover,.vid[open]:active{transform:none}
+  .vid>summary{display:block;list-style:none;cursor:pointer}
+  .vid>summary::-webkit-details-marker{display:none}   /* Safari draws its own triangle */
+  .vhd{display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:center}
   .thumb{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#071f14}
   .thumb img{width:100%;height:100%;object-fit:cover;display:block}
   .thumb .play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
@@ -229,7 +237,37 @@
     background:linear-gradient(180deg,transparent,rgba(0,0,0,.35))}
   .vtx{min-width:0}
   .vt{font-weight:700;font-size:13.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  /* Release the 3-line clamp once open, or a long title stays truncated while you read. */
+  .vid[open] .vt{-webkit-line-clamp:unset}
   .vm{font-size:11px;color:var(--mut);margin-top:5px;font-weight:600}
+  .vtag{display:inline-block;margin-left:2px;padding:1px 6px;border-radius:6px;font-size:10px;
+    font-weight:800;letter-spacing:.02em;background:rgba(125,255,176,.14);color:var(--gold)}
+  .vtag.dim{background:var(--glass2);color:var(--mut)}
+  /* EXPANDED READING PANE — headline, then emoji-headed sections, then takeaways.
+     A single 350-word block was unreadable on a phone; each section is a short scroll. */
+  .vbody{margin-top:12px;padding-top:12px;border-top:1px solid var(--hair2)}
+  .vtl{margin:0 0 14px;font-size:14px;line-height:1.5;font-weight:700;color:var(--silver);
+    background:rgba(125,255,176,.07);border-left:3px solid var(--gold);
+    border-radius:0 10px 10px 0;padding:9px 12px}
+  .vsec{margin:0 0 13px}
+  .vsh{display:flex;gap:7px;align-items:baseline;font-size:12.5px;font-weight:800;
+    letter-spacing:.01em;color:var(--gold);margin-bottom:4px}
+  .vsh .e{font-size:13.5px;line-height:1}
+  .vst{margin:0;font-size:13.5px;line-height:1.6}
+  .vs{margin:0;font-size:13.5px;line-height:1.62}   /* plain-prose summaries (older shape) */
+  .vkey{display:flex;gap:7px;align-items:baseline;font-size:12.5px;font-weight:800;
+    color:var(--gold);margin:15px 0 6px}
+  .vpts{margin:0;padding-left:19px}
+  .vpts li{font-size:13px;line-height:1.5;margin-bottom:5px}
+  .vpts li::marker{color:var(--gold)}
+  .vd{margin:13px 0 0;font-size:12.5px;line-height:1.55;color:var(--mut)}
+  .vd b{color:var(--silver);font-weight:700}
+  .vch{margin:10px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:5px}
+  .vch li{font-size:10.5px;font-weight:600;color:var(--mut);background:var(--glass);
+    border:1px solid var(--hair2);border-radius:7px;padding:2px 7px}
+  .vlink{display:inline-block;margin-top:14px;font-size:12.5px;font-weight:700;
+    color:var(--silver);text-decoration:none}
+  .vlink:hover{text-decoration:underline}
   /* NEWS ROWS */
   .news{display:block;text-decoration:none;color:inherit;padding:12px 14px;margin-bottom:6px;border-radius:var(--rs);
     border:1px solid transparent;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.02));
@@ -237,7 +275,7 @@
   .news:hover{background:var(--glass2);transform:translateX(3px);border-color:rgba(125,255,176,.28)}
   .nt{font-weight:700;font-size:13.5px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
   .nm{font-size:11px;color:var(--mut);margin-top:5px;font-weight:600}
-  @media (max-width:430px){ .vid{grid-template-columns:124px 1fr;gap:10px} .vt{font-size:13px} }
+  @media (max-width:430px){ .vhd{grid-template-columns:124px 1fr;gap:10px} .vt{font-size:13px} }
 
 </style>
 </head>
@@ -278,7 +316,7 @@
 
 <div class="wrap">
   <div class="foot">
-    Videos are listed from the public YouTube feeds of <a href="https://www.youtube.com/@cbssportsgolazo" target="_blank" rel="noopener">CBS Sports Golazo</a> — title, thumbnail and publish time only; tap any card to watch it on YouTube, where it belongs. Headlines come from the public news feeds of CBS Sports, ESPN, BBC Sport, Sky Sports and the Guardian, and open on the publisher's own site. <b>No transcripts, descriptions or article text are reproduced here</b> — this is an index that points at the originals. Scores and tables are live from <a href="https://www.espn.com/soccer/" target="_blank" rel="noopener">ESPN</a>. Unofficial personal dashboard; not affiliated with CBS, Paramount, YouTube or ESPN.
+    Videos are listed from the public YouTube feeds of <a href="https://www.youtube.com/@cbssportsgolazo" target="_blank" rel="noopener">CBS Sports Golazo</a>. Each card carries an <b>original summary written for this page</b> from the segment's audio, plus <b>CBS's own published video description</b>, quoted and credited as theirs. <b>No transcript text is reproduced</b> — the summaries are original prose, far shorter than the source, and every card links to the full segment on YouTube, where it belongs. Headlines come from the public news feeds of CBS Sports, ESPN, BBC Sport, Sky Sports and the Guardian — <b>titles and links only</b> — and open on the publisher's own site. Scores and tables are live from <a href="https://www.espn.com/soccer/" target="_blank" rel="noopener">ESPN</a>. Unofficial personal dashboard; not affiliated with CBS, Paramount, YouTube or ESPN.
   </div>
 </div>
 
@@ -321,7 +359,11 @@ const COMPS=[
   {slug:"uefa.champions",label:"Champions League"}
 ];
 const TABLE_COMPS=COMPS.filter(c=>c.slug!=="uefa.champions");
-const CACHE_KEY="golazo-cache-v2";   // v1 held unfiltered news
+const CACHE_KEY="golazo-cache-v3";   // v1 held unfiltered news; v2 predates `sums`
+// Written summaries + CBS blurbs + chapter lists, built hourly by ~/golazo-publish.sh.
+// Same-origin, so no proxy and no rss2json — and sw.js already runtime-caches same-origin GETs,
+// which is why offline needs no service-worker change.
+const SUMS_URL="data/footy-summaries.json";
 const SLOW_MS=5*60*1000;      // videos + news: every 5 min, not every 60s
 const TABLES_MS=10*60*1000;   // tables: lazy, then every 10 min while visible
 const $=s=>document.querySelector(s);
@@ -355,6 +397,16 @@ async function retryWithBackoff(url,rounds){
   }
   return null;
 }
+/* The written summaries, keyed by video id. Returns null on ANY failure — a missing or
+   malformed file must degrade to today's plain link cards, never break the page. The shape
+   guard catches valid-JSON-of-the-wrong-shape, which a bare try/catch would let through. */
+async function fetchSums(){
+  try{
+    const d=await fetchJSON(SUMS_URL);
+    return (d&&d.videos&&typeof d.videos==="object")?d:null;
+  }catch(e){ return null; }
+}
+
 /* Snapshot captured at build time so the show tab always has real content when every
    proxy is down. Titles + ids + timestamps only — the cards still link out to YouTube. */
 const SNAP={"date":"2026-08-01","footy":[{"id":"PFclUh1EpiA","t":"A New Era at Tottenham: De Zerbi’s Plan to Revive Spurs","d":"2026-07-31T15:40:45+00:00"},{"id":"c2mre62OlVM","t":"CONCACAF & AFC Join UEFA in Opposing FIFA's plan for the World Cup | Will anyone else follow?","d":"2026-07-31T15:09:18+00:00"},{"id":"X_xs5TvJ4VY","t":"UEFA to BOYCOTT FIFA World Cup | Will Anyone Else Follow? | Everything you need to know EXPLAINED!","d":"2026-07-30T16:15:30+00:00"},{"id":"7EJmyuPHv4Y","t":"Eddie Howe LEAVES Newcastle... What Happens Next?","d":"2026-07-30T15:33:31+00:00"},{"id":"grgGYKqwg5w","t":"Barcelona two BIG signings | How will Gordon & Adeyemi fit into the team?","d":"2026-07-30T15:15:36+00:00"},{"id":"bvi5c_LO03I","t":"New Club. New Pressure. Can These Managers Deliver? 🧐","d":"2026-07-30T14:41:14+00:00"},{"id":"Fe7004p-M_g","t":"Arsenal's Piero Hincapié discusses Premier League title + 2026/27 season preview","d":"2026-07-29T16:14:29+00:00"},{"id":"M-c70Ss9Sbk","t":"Morning Footy LIVE: FIFA selling stake in the WORLD CUP","d":"2026-07-29T16:04:02+00:00"},{"id":"2n201omvRMA","t":"What is the FFE? What are FIFA's plans with Private Investors? Everything you NEED to Know Explained","d":"2026-07-29T15:53:37+00:00"},{"id":"AE6XbA7mekM","t":"Will Real Madrid be UNSTOPPABLE this Season? | 2026-2027 La Liga Season Preview","d":"2026-07-28T16:46:15+00:00"},{"id":"LXKymDDKEQQ","t":"CHELSEA 2026-2027 Season PREVIEW","d":"2026-07-28T15:27:23+00:00"},{"id":"mh75VhtkAfw","t":"PREVIEWING the 2026/27 English Premier League","d":"2026-07-27T16:06:22+00:00"},{"id":"62QTUstssQo","t":"ARSENAL 2026-2027 Season PREVIEW","d":"2026-07-27T15:08:24+00:00"},{"id":"8ZuQxS3lBlY","t":"Is Marc Cucurella the BEST FULLBACK in the World? 🇪🇸👑","d":"2026-07-23T15:16:37+00:00"}],"channel":[{"id":"6UDgd5nL6K0","t":"How Esther González’s Departure Impacts Gotham FC 🗽 | NWSL CheckIns & WAFCON Recap | Attacking Third","d":"2026-07-31T03:58:40+00:00"},{"id":"PaDVoliE2Fw","t":"NWSL Summer Check-In: Looking at EVERY team in the top 8 of this NWSL season","d":"2026-07-30T20:42:47+00:00"},{"id":"-KtxOEMykJs","t":"Bay FC vs. Gotham FC: Extended Highlights | NWSL | W Golazo","d":"2026-07-30T04:25:22+00:00"},{"id":"W3-J5x-vCVY","t":"Kansas City Current vs. Racing Louisville FC: Extended Highlights | NWSL | W Golazo","d":"2026-07-30T02:25:07+00:00"},{"id":"k8cWOVvZ35k","t":"San Diego Wave FC vs. Seattle Reign FC: Extended Highlights | NWSL | W Golazo","d":"2026-07-26T23:18:53+00:00"},{"id":"gFKmOAONlko","t":"NWSL Summer Check-ins | Weekend Preview: Spirit vs Summit, Gotham vs Thorns | Attacking Third","d":"2026-07-24T03:57:34+00:00"},{"id":"j2XXkq3aM3k","t":"Racing Louisville, Chicago, Boston and More: Summer Verdict","d":"2026-07-23T19:08:10+00:00"},{"id":"B7W370QlcZk","t":"WAY TOO EARLY 2027 Women's World Cup Predictions","d":"2026-07-23T18:33:24+00:00"},{"id":"VlQ83nsGgcE","t":"NWSL Team of the WEEK | Croix Bethune & Trinity Byars SHOW OUT","d":"2026-07-20T19:57:30+00:00"},{"id":"ijtPEvSavXI","t":"Can Gotham FC Stay Hot? Heaps Makes Her Mark in Denver | NWSL Matchweek 13 Recap","d":"2026-07-20T02:17:52+00:00"}]};
@@ -366,7 +418,8 @@ function fromSnap(list){
 
 /* ============ STATE ============ */
 const STATE={footy:[],channel:[],news:[],scores:[],tables:[],
-  stamp:null,vidStamp:0,newsStamp:0,tblStamp:0,ok:false,vidsFresh:false,vidSrc:''};
+  stamp:null,vidStamp:0,newsStamp:0,tblStamp:0,ok:false,vidsFresh:false,vidSrc:'',
+  sums:{},sumUpdated:''};
 
 /* ============ PARSE ============ */
 // Parsed with DOMParser, not regex. Video id comes from the alternate link so we never
@@ -413,7 +466,8 @@ function parseTable(d){
 /* ============ LOAD ============ */
 function saveCache(){
   try{ localStorage.setItem(CACHE_KEY,JSON.stringify({footy:STATE.footy,channel:STATE.channel,news:STATE.news,
-    scores:STATE.scores,tables:STATE.tables,stamp:Date.now(),vidStamp:STATE.vidStamp,newsStamp:STATE.newsStamp})); }catch(e){}
+    scores:STATE.scores,tables:STATE.tables,stamp:Date.now(),vidStamp:STATE.vidStamp,newsStamp:STATE.newsStamp,
+    sums:STATE.sums,sumUpdated:STATE.sumUpdated})); }catch(e){}
 }
 function loadCache(){
   try{
@@ -421,7 +475,8 @@ function loadCache(){
     if(c&&((c.footy||[]).length||(c.news||[]).length)){
       STATE.footy=c.footy||[]; STATE.channel=c.channel||[]; STATE.news=c.news||[];
       STATE.scores=c.scores||[]; STATE.tables=c.tables||[]; STATE.stamp=c.stamp;
-      STATE.vidStamp=c.vidStamp||0; STATE.newsStamp=c.newsStamp||0; return true;
+      STATE.vidStamp=c.vidStamp||0; STATE.newsStamp=c.newsStamp||0;
+      STATE.sums=c.sums||{}; STATE.sumUpdated=c.sumUpdated||""; return true;
     }
   }catch(e){}
   return false;
@@ -472,6 +527,7 @@ async function load(){
     jobs.push(feedVideos(`${YT}playlist_id=${FOOTY_PLAYLIST}`).catch(()=>[]));
     jobs.push(feedVideos(`${YT}channel_id=${GOLAZO_CHANNEL}`).catch(()=>[]));
     jobs.push(fetchNews().catch(()=>[]));
+    jobs.push(fetchSums().catch(()=>null));
   }
   const res=await Promise.all(jobs);
   const sc=res[0]||{ok:false,list:[]};
@@ -488,6 +544,11 @@ async function load(){
     if(!ch.length&&!STATE.channel.length){ STATE.channel=fromSnap(SNAP.channel); }
     if(!f.length&&STATE.vidSrc!=="snapshot"&&STATE.footy.length) STATE.vidSrc="cache";
     if(nw.length){ STATE.news=nw; STATE.newsStamp=now; }
+    // Only overwrite on success, so a transient 404 keeps the copy we already have. Deliberately
+    // NOT part of `fetched` below: a missing summaries file must never flip the chip to an error
+    // or mark the cycle stale — the videos themselves came back fine.
+    const su=res[4];
+    if(su){ STATE.sums=su.videos; STATE.sumUpdated=su.updated||""; }
     if(f.length||ch.length||nw.length) fetched=true;
   }
   const good=fetched;                      // freshness, not "do we have anything on screen"
@@ -529,24 +590,73 @@ const todaysMatches=()=>{const d=new Date().toDateString();return STATE.scores.f
 /* ============ RENDER ============ */
 function setChip(cls,txt){ const c=$("#chip"); c.className="chip "+cls; $("#chipTxt").textContent=txt; }
 
-// Metadata card only — thumbnail, title, time. The whole card is a link out to YouTube.
+// Which cards the reader has expanded. Held outside the markup because renderAll() rebuilds
+// innerHTML wholesale on the 60s scores tick — without this, an open card slams shut mid-read.
+const OPEN=new Set();
+
+/* The write-up for a video, or null if there is nothing to expand. Both feeds carry uploads
+   whose description field is still the literal placeholder "Description here" (3 of 29 on
+   2026-08-04), so "we have a record" is not the same as "we have something to show". */
+function sumFor(v){
+  const s=STATE.sums[v.id];
+  if(!s) return null;
+  return (s.sum||s.nosum||s.blurb||(s.chapters||[]).length)?s:null;
+}
+// Before the first publish (or if the file 404s) there is nothing to expand, so the tab note
+// must not tell them to tap a card to read it.
+function hasSums(){ for(const k in STATE.sums) return true; return false; }
+
+/* A <details> when there's something to read, otherwise exactly the link card this app has
+   always rendered. The <a> can't stay wrapped around everything once there's a link inside the
+   body — a nested link is invalid HTML and breaks both tap and keyboard. */
 function videoCard(v){
-  return `<a class="vid" href="${esc(v.url)}" target="_blank" rel="noopener">
-    <div class="thumb"><img loading="lazy" src="${esc(v.thumb)}" alt=""><span class="play">▶</span></div>
-    <div class="vtx"><div class="vt">${esc(v.title)}</div>
-    <div class="vm">${esc(ago(v.ts))}${v.ts?` · ${esc(fmtDay(v.ts))}`:""} · YouTube ↗</div></div></a>`;
+  const s=sumFor(v);
+  const when=`${esc(ago(v.ts))}${v.ts?` · ${esc(fmtDay(v.ts))}`:""}`;
+  const head=tail=>`<div class="vhd">
+      <div class="thumb"><img loading="lazy" src="${esc(v.thumb)}" alt=""><span class="play">▶</span></div>
+      <div class="vtx"><div class="vt">${esc(v.title)}</div>
+      <div class="vm">${when} · ${tail}</div></div>
+    </div>`;
+  if(!s) return `<a class="vid" href="${esc(v.url)}" target="_blank" rel="noopener">${head("YouTube ↗")}</a>`;
+
+  // `secs` is the current shape (headline + emoji-headed sections); `sum` is the older flat
+  // prose, still rendered so a part-migrated sidecar never shows a blank card.
+  const secs=s.secs||[], written=!!(s.tldr||secs.length||s.sum);
+  const tag = written   ? `<span class="vtag">📝 Summary</span>`
+            : s.nosum   ? `<span class="vtag dim">No summary</span>`
+                        : `<span class="vtag dim">Description only</span>`;
+  const b=[];
+  if(written){
+    if(s.tldr) b.push(`<p class="vtl">⚡ ${esc(s.tldr)}</p>`);
+    secs.forEach(x=>b.push(`<div class="vsec"><div class="vsh"><span class="e">${esc(x.e||"▪️")}</span>${esc(x.h||"")}</div>`
+      +`<p class="vst">${esc(x.t||"")}</p></div>`));
+    if(s.sum&&!secs.length) b.push(`<p class="vs">${esc(s.sum)}</p>`);
+    if((s.pts||[]).length){
+      b.push(`<div class="vkey"><span class="e">🔑</span>Key takeaways</div>`
+        +`<ul class="vpts">${s.pts.map(p=>`<li>${esc(p)}</li>`).join("")}</ul>`);
+    }
+  }else if(s.nosum){
+    b.push(`<p class="vd">🔇 This segment has no captions, so there's no write-up for it${s.blurb?" — CBS's own description is below":""}.</p>`);
+  }else{
+    b.push(`<p class="vd">🕒 A summary is written after each show; this one hasn't been done yet.</p>`);
+  }
+  if(s.blurb) b.push(`<p class="vd"><b>📺 CBS's description:</b> ${esc(s.blurb)}</p>`);
+  if((s.chapters||[]).length) b.push(`<ul class="vch">${s.chapters.map(c=>`<li>⏱️ ${esc(c)}</li>`).join("")}</ul>`);
+  b.push(`<a class="vlink" href="${esc(v.url)}" target="_blank" rel="noopener">▶️ Watch the full segment on YouTube ↗</a>`);
+  return `<details class="vid" data-id="${esc(v.id)}"${OPEN.has(v.id)?" open":""}>`
+    +`<summary>${head(tag)}</summary><div class="vbody">${b.join("")}</div></details>`;
 }
 function renderFooty(){
   const el=$("#footyEl");
   if(!STATE.footy.length){ el.innerHTML=`<div class="note warn">Morning Footy feed unavailable right now — it loads through a public proxy that rate-limits. It'll fill in on the next refresh.</div>`; return; }
   const src=STATE.vidSrc;
-  el.innerHTML=`<div class="note">🎙️ <b>Morning Footy</b> — CBS Golazo's weekday show. ${STATE.footy.length} latest segments; tap any to watch on YouTube.${src==="snapshot"?` <b>Snapshot from ${esc(SNAP.date)}</b> — YouTube's feed needs a public proxy and none answered, so these are the segments captured when the app was built. Tap still opens the real video.`:(src==="cache"?" <b>Showing cached items</b> — the feed proxy didn't answer this time.":"")}</div>`
+  el.innerHTML=`<div class="note">🎙️ <b>Morning Footy</b> — CBS Golazo's weekday show. ${STATE.footy.length} latest segments; ${hasSums()?"tap a card to read it.":"tap any to watch on YouTube."}${STATE.sumUpdated?` Write-ups updated ${esc(STATE.sumUpdated)}.`:""}${src==="snapshot"?` <b>Snapshot from ${esc(SNAP.date)}</b> — YouTube's feed needs a public proxy and none answered, so these are the segments captured when the app was built. Tap still opens the real video.`:(src==="cache"?" <b>Showing cached items</b> — the feed proxy didn't answer this time.":"")}</div>`
     +STATE.footy.map(videoCard).join("");
 }
 function renderChannel(){
   const el=$("#channelEl");
   if(!STATE.channel.length){ el.innerHTML=`<div class="note warn">Channel feed unavailable right now — retrying on the next refresh.</div>`; return; }
-  el.innerHTML=`<div class="note">📺 <b>CBS Sports Golazo</b> — the channel's latest uploads. Its output right now leans heavily to NWSL and WAFCON, so expect women's soccer alongside the men's.</div>`
+  el.innerHTML=`<div class="note">📺 <b>CBS Sports Golazo</b> — the channel's latest uploads; ${hasSums()?"tap a card to read it.":"tap any to watch on YouTube."} Its output right now leans heavily to NWSL and WAFCON, so expect women's soccer alongside the men's.${STATE.sumUpdated?` Write-ups updated ${esc(STATE.sumUpdated)}.`:""}</div>`
     +STATE.channel.map(videoCard).join("");
 }
 function renderNews(){
@@ -646,6 +756,16 @@ document.querySelectorAll("nav button").forEach(b=>{b.onclick=()=>{
   if(b.dataset.t==="tables") ensureTables();     // lazy: 5 extra calls only when asked for
 };});
 $("#refreshBtn").onclick=refresh;
+
+// Remember which cards are open so a re-render doesn't close them. `toggle` does not bubble,
+// so this has to listen in the capture phase on the container.
+["#footyEl","#channelEl"].forEach(sel=>{
+  $(sel).addEventListener("toggle",e=>{
+    const id=e.target&&e.target.dataset?e.target.dataset.id:null;
+    if(!id) return;
+    e.target.open?OPEN.add(id):OPEN.delete(id);
+  },true);
+});
 
 if(loadCache()){ setChip("snap","Cached — updating…"); renderAll(); }
 refresh();

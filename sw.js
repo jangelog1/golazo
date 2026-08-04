@@ -1,4 +1,4 @@
-const CACHE = 'golazo-v4';
+const CACHE = 'golazo-v5';   // v5: expandable summary cards + data/footy-summaries.json
 const ASSETS = ['./', 'index.html', 'icon-512.png', 'manifest.webmanifest'];
 
 self.addEventListener('install', e => {
